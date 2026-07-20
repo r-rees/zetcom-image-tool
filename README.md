@@ -1,7 +1,9 @@
-# zetcom image cropper
+# zetcom image tool
 
 Browser-based image cropper & social-card composer for the zetcom relaunch.
-**Live:** https://r-rees.github.io/zetcom-image-cropper/
+**Live (once public + Pages on):** https://r-rees.github.io/zetcom-image-tool/
+Currently a private repo — open `index.html` locally, or flip the repo to public
+and enable Pages to serve the live URL.
 
 Upload any image (any format / ratio), pick a target — relaunch panel (hero,
 image_text, sticky, benefits, teaser, up_next, panel_image), social format
