@@ -150,7 +150,9 @@
           <input id="accentCustom" type="color" value="#ff5900" title="Custom-Farbe" style="width:38px;height:38px;padding:0;border:1px solid var(--line);border-radius:2px;display:none">
         </div>
 
-        <label class="mini" style="margin-top:12px">Eyebrow (klein, GROSS, Akzent)</label>
+        <label class="mini" style="margin-top:12px;display:flex;justify-content:space-between;align-items:center">Eyebrow (klein, Akzent)
+          <span style="text-transform:none;letter-spacing:0;font-weight:400;display:flex;gap:5px;align-items:center;cursor:pointer">
+            <input type="checkbox" id="eyebrowCaps" checked style="accent-color:var(--orange)">GROSS</span></label>
         <input id="eyebrow" type="text" placeholder="z. B. We're hiring">
         <label class="mini" style="margin-top:10px">Titel (groß) — <b>**Wort**</b>=Bold+Akzent</label>
         <textarea id="title" rows="2" placeholder="We are&#10;hiring." style="width:100%;font-family:var(--font);font-size:14px;padding:9px 10px;border:1px solid var(--line);border-radius:2px;resize:vertical"></textarea>
@@ -310,7 +312,7 @@ const isLogo=()=>panel.fit==='logo';
 let panel=PANELS[0];
 let fmt='webp', quality=80, bg='transparent';
 // ---- Composer state ----
-let composerOn=false, bgMode='photo', product='museum', accentCustom='#ff5900';
+let composerOn=false, bgMode='photo', product='museum', accentCustom='#ff5900', eyebrowCaps=true;
 let eyebrowTxt='', titleTxt='', sublineTxt='', metaTxt='', overlayOp=0.35, textAlign='left';
 let ctaOn=false, ctaLabel='', ctaArrow='down';
 let textX=null, textY=null;               // freie Textblock-Position (Ziel-px, top-left); null = auto
@@ -714,7 +716,8 @@ function drawCompText(g,f,TW,TH,M){
   if(hasM) blockH+=gSM+mLines.length*mLH;
   if(hasC) blockH+=gMC+cH;
   let eyW=0;
-  if(hasEy){ g.font=`400 ${eySize}px "DM Sans"`; g.letterSpacing=(0.08*eySize)+'px'; const sq=Math.max(8,Math.round(eySize*0.85)); eyW=sq+eySize*0.5+g.measureText(eyebrowTxt.trim().toUpperCase()).width; g.letterSpacing='0px'; }
+  const eyStr = eyebrowCaps ? eyebrowTxt.trim().toUpperCase() : eyebrowTxt.trim();
+  if(hasEy){ g.font=`400 ${eySize}px "DM Sans"`; g.letterSpacing=(0.08*eySize)+'px'; const sq=Math.max(8,Math.round(eySize*0.85)); eyW=sq+eySize*0.5+g.measureText(eyStr).width; g.letterSpacing='0px'; }
   const blockW=Math.max(eyW, groupW(tLines), groupW(sLines), groupW(mLines), cW, 1);
   const bx0 = textX!=null? textX : M;
   const by  = textY!=null? textY : (TH-M-blockH);
@@ -732,7 +735,7 @@ function drawCompText(g,f,TW,TH,M){
     }
   };
   if(hasEy){
-    const sq=Math.max(8,Math.round(eySize*0.85)), eyText=eyebrowTxt.trim().toUpperCase();
+    const sq=Math.max(8,Math.round(eySize*0.85)), eyText=eyStr;
     g.font=`400 ${eySize*f}px "DM Sans"`; g.letterSpacing=(0.08*eySize*f)+'px';
     const tw=g.measureText(eyText).width/f, gapSq=eySize*0.5, totalW=sq+gapSq+tw;
     let ex = centered? (TW-totalW)/2 : bx0;
@@ -816,6 +819,7 @@ $('bgMode').onchange=e=>{ bgMode=e.target.value; $('overlayWrap').style.display=
 prodSel.onchange=e=>{ product=e.target.value; $('accentCustom').style.display = product==='custom'?'block':'none'; render(); };
 $('accentCustom').oninput=e=>{ accentCustom=e.target.value; render(); };
 $('eyebrow').oninput=e=>{ eyebrowTxt=e.target.value; render(); };
+$('eyebrowCaps').onchange=e=>{ eyebrowCaps=e.target.checked; render(); };
 $('title').oninput=e=>{ titleTxt=e.target.value; render(); };
 $('subline').oninput=e=>{ sublineTxt=e.target.value; render(); };
 $('meta').oninput=e=>{ metaTxt=e.target.value; render(); };
