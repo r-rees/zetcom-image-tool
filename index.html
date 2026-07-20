@@ -88,7 +88,7 @@
     <div class="canvas-area">
       <div id="drop">Bild hierher ziehen oder klicken<br><small>PNG · JPG · WebP · SVG · beliebiges Format/Ratio</small></div>
       <canvas id="cv" width="600" height="400" style="display:none"></canvas>
-      <input id="file" type="file" accept="image/*" style="display:none">
+      <input id="file" type="file" accept="image/*,.svg" style="display:none">
     </div>
     <div class="toolbar" id="tools" style="display:none">
       <div class="ctl">
@@ -221,7 +221,7 @@
             <div style="flex:1"><label class="mini">Ecke</label>
               <select id="logoCorner"><option value="tr">oben rechts</option><option value="tl">oben links</option><option value="br">unten rechts</option><option value="bl">unten links</option></select></div>
           </div>
-          <input id="logoUpload" type="file" accept="image/*" style="margin-top:6px;font-size:12px;display:none">
+          <input id="logoUpload" type="file" accept="image/*,.svg" style="margin-top:6px;font-size:12px;display:none">
           <div class="ctl" style="margin-top:8px">
             <label>Logo-Größe <b id="lsv">14%</b></label>
             <input id="logoScale" type="range" min="6" max="34" value="14">
@@ -572,12 +572,27 @@ fileIn.onchange=e=>{if(e.target.files[0])loadFile(e.target.files[0]);};
 ['dragover','dragenter'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('hot');}));
 ['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();if(ev==='drop'&&e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);drop.classList.remove('hot');}));
 
+// Dekodiert Bilddateien inkl. SVG (createImageBitmap ist bei SVG in Chrome unzuverlässig →
+// SVG über <img>+Data-URI laden, intrinsische Größe notfalls aus viewBox ergänzen).
+async function decodeImageFile(file){
+  const isSvg = file.type==='image/svg+xml' || /\.svg$/i.test(file.name||'');
+  if(isSvg){
+    let txt=await file.text();
+    const m=txt.match(/<svg[^>]*>/i);
+    if(m && !/\bwidth\s*=/.test(m[0])){
+      const vb=m[0].match(/viewBox\s*=\s*["']\s*[\d.eE+-]+\s+[\d.eE+-]+\s+([\d.eE+-]+)\s+([\d.eE+-]+)/i);
+      if(vb) txt=txt.replace(m[0], m[0].replace(/<svg/i,`<svg width="${vb[1]}" height="${vb[2]}"`));
+    }
+    const url='data:image/svg+xml;charset=utf8,'+encodeURIComponent(txt);
+    return await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>rej(new Error('SVG konnte nicht gerendert werden')); im.src=url; });
+  }
+  try{ return await createImageBitmap(file,{imageOrientation:'from-image'}); }
+  catch(_){ return await createImageBitmap(file); }
+}
 async function loadFile(file){
   try{
-    let bmp;
-    try{ bmp=await createImageBitmap(file,{imageOrientation:'from-image'}); }
-    catch(_){ bmp=await createImageBitmap(file); }
-    img=bmp; iw=bmp.width; ih=bmp.height; computeTrim();
+    const bmp=await decodeImageFile(file);
+    img=bmp; iw=bmp.naturalWidth||bmp.width; ih=bmp.naturalHeight||bmp.height; computeTrim();
     if(!document.getElementById('fname').value){
       document.getElementById('fname').value=file.name.replace(/\.[^.]+$/,'').toLowerCase().replace(/[_\s]+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'');
     }
@@ -654,17 +669,20 @@ function tokenizeText(raw){                      // Wörter mit sp = Leerzeichen
   });
   return paras;
 }
-function wrapLines(g, raw, size, maxW){          // → Zeilen aus {t,bold,w,pre}; pre = führende Leerzeichenbreite
+// effektive Schriftstärke je Tier — MUSS zwischen Messen und Zeichnen identisch sein, sonst Überlappung
+function effBold(word, kind){ return kind==='sub' ? true : kind==='meta' ? false : word.bold; }
+function wrapLines(g, raw, size, maxW, kind){    // → Zeilen aus {t,bold,w,pre}; pre = führende Leerzeichenbreite
   const paras=tokenizeText(raw), sw={};
   const spaceW=b=>{ if(sw[b]==null){ g.font=`${b?700:300} ${size}px "DM Sans"`; g.letterSpacing='0px'; sw[b]=g.measureText(' ').width; } return sw[b]; };
-  const wordW=w=>{ g.font=`${w.bold?700:300} ${size}px "DM Sans"`; g.letterSpacing='0px'; return g.measureText(w.t).width; };
+  const wordW=(t,b)=>{ g.font=`${b?700:300} ${size}px "DM Sans"`; g.letterSpacing='0px'; return g.measureText(t).width; };
   const lines=[];
   for(const para of paras){
     let line=[], w=0;
     for(const word of para){
-      const ww=wordW(word), pre=(line.length&&word.sp)? spaceW(word.bold):0;
+      const b=effBold(word,kind);                // in der Stärke messen, in der auch gezeichnet wird
+      const ww=wordW(word.t,b), pre=(line.length&&word.sp)? spaceW(b):0;
       if(line.length && w+pre+ww>maxW){ lines.push(line); line=[]; w=0; }
-      const pin=(line.length&&word.sp)? spaceW(word.bold):0;
+      const pin=(line.length&&word.sp)? spaceW(b):0;
       line.push({t:word.t, bold:word.bold, w:ww, pre:pin}); w+=pin+ww;
     }
     lines.push(line);
@@ -680,9 +698,9 @@ function drawCompText(g,f,TW,TH,M){
   const sSize=Math.round(TW*0.033*bodyScale), mSize=Math.round(TW*0.021*bodyScale), cSize=Math.round(TW*0.021*bodyScale);
   const hasEy=eyebrowTxt.trim()!=='', hasT=titleTxt.trim()!=='', hasS=sublineTxt.trim()!=='', hasM=metaTxt.trim()!=='', hasC=ctaOn&&ctaLabel.trim()!=='';
   const maxW=TW-2*M;
-  const tLines=hasT?wrapLines(g,titleTxt.trim(),tSize,maxW):[];
-  const sLines=hasS?wrapLines(g,sublineTxt.trim(),sSize,maxW):[];
-  const mLines=hasM?wrapLines(g,metaTxt.trim(),mSize,maxW):[];
+  const tLines=hasT?wrapLines(g,titleTxt.trim(),tSize,maxW,'title'):[];
+  const sLines=hasS?wrapLines(g,sublineTxt.trim(),sSize,maxW,'sub'):[];
+  const mLines=hasM?wrapLines(g,metaTxt.trim(),mSize,maxW,'meta'):[];
   const gEyT=Math.round(tSize*0.32), tLH=Math.round(tSize*1.08), gTS=Math.round(sSize*1.0), sLH=Math.round(sSize*1.28),
         gSM=Math.round(mSize*0.8), mLH=Math.round(mSize*1.4), gMC=Math.round(cSize*1.3);
   const cPadX=Math.round(cSize*1.2), cPadY=Math.round(cSize*0.85), cBorder=Math.max(2,Math.round(TW*0.0018));
@@ -707,7 +725,7 @@ function drawCompText(g,f,TW,TH,M){
     let x = centered? (TW-lineW(ln))/2 : bx0;
     for(const wd of ln){
       x+=wd.pre;                                  // natürliches Leerzeichen davor
-      const bold = kind==='sub'? true : wd.bold;
+      const bold = effBold(wd, kind);
       const color = kind==='meta'? mut : (wd.bold?acc:col);
       g.font=`${bold?700:300} ${size*f}px "DM Sans"`; g.letterSpacing='0px';
       g.fillStyle=color; g.fillText(wd.t, x*f, y*f); x+=wd.w;
@@ -820,7 +838,7 @@ $('logoSource').onchange=e=>{ logoSource=e.target.value; $('logoUpload').style.d
 $('logoCorner').onchange=e=>{ logoCorner=e.target.value; render(); };
 $('logoScale').oninput=e=>{ logoScale=+e.target.value/100; $('lsv').textContent=e.target.value+'%'; render(); };
 $('logoUpload').onchange=async e=>{ const file=e.target.files[0]; if(!file)return;
-  try{ const bmp=await createImageBitmap(file,{imageOrientation:'from-image'}); LOGO_IMG.custom=bmp; render(); }
+  try{ LOGO_IMG.custom=await decodeImageFile(file); logoSource='custom'; $('logoSource').value='custom'; render(); }
   catch(err){ alert('Logo konnte nicht geladen werden: '+err.message); } };
 
 // ---- Font + Logos einbetten/laden ----
