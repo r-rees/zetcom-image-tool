@@ -20,13 +20,20 @@
   @media(max-width:900px){.wrap{grid-template-columns:1fr;height:auto}}
   /* stage */
   .stage{display:flex;flex-direction:column;min-width:0;background:#fafafa}
-  .canvas-area{flex:1;display:flex;align-items:center;justify-content:center;padding:22px;min-height:340px;position:relative}
+  .canvas-area{flex:1;display:flex;overflow:auto;padding:22px;min-height:340px;position:relative}
   #drop{position:absolute;inset:22px;border:2px dashed var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--mut);font-size:14px;pointer-events:none;transition:.15s}
   #drop.hot{border-color:var(--orange);background:rgba(255,89,0,.05);color:var(--ink)}
   #drop.hidden{display:none}
-  canvas{max-width:100%;max-height:100%;box-shadow:0 2px 20px rgba(0,0,0,.12);cursor:grab;touch-action:none;background:
+  canvas{max-width:100%;max-height:100%;margin:auto;box-shadow:0 2px 20px rgba(0,0,0,.12);cursor:grab;touch-action:none;background:
     repeating-conic-gradient(#eee 0% 25%, #fff 0% 50%) 50%/22px 22px}
   canvas.drag{cursor:grabbing}
+  /* Arbeitsflächen-Leiste: Ansicht zoomen (nicht das Bild) + leere Fläche ohne Upload */
+  .wbar{border-bottom:1px solid var(--line);background:#fff;padding:8px 18px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mut);flex-wrap:wrap}
+  .wbar .wlab{text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+  .wbar b{color:var(--ink);font-weight:600;min-width:46px;text-align:center}
+  .wbar button{padding:5px 10px;font-size:13px;line-height:1.2}
+  .wbar .wsep{width:1px;height:20px;background:var(--line);margin:0 6px}
+  .wbar label{display:flex;align-items:center;gap:6px;color:var(--ink);cursor:pointer}
   /* toolbar */
   .toolbar{border-top:1px solid var(--line);background:#fff;padding:12px 18px;display:flex;flex-wrap:wrap;gap:18px;align-items:center}
   .ctl{display:flex;flex-direction:column;gap:5px;min-width:150px}
@@ -84,6 +91,12 @@
   .block.acc.collapsed>.acc-h::after{transform:rotate(-90deg)}
   .block.acc.collapsed>:not(.acc-h){display:none!important}
   button.aln{padding:6px 0;min-width:0;flex:1;font-size:15px;line-height:1;font-weight:400}
+  /* CD-Palette unter jedem Farbfeld */
+  .pal{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+  .pal i{width:18px;height:18px;border-radius:2px;border:1px solid var(--line);cursor:pointer;display:block}
+  .pal i:hover{outline:2px solid var(--ink);outline-offset:1px}
+  .pal i.on{outline:2px solid var(--orange);outline-offset:1px}
+  .pal i.transparent{background:repeating-conic-gradient(#ddd 0% 25%,#fff 0% 50%) 50%/8px 8px}
 </style>
 </head>
 <body>
@@ -95,8 +108,18 @@
 <div class="wrap">
   <!-- STAGE -->
   <div class="stage">
+    <div class="wbar">
+      <span class="wlab">Arbeitsfläche</span>
+      <button class="ghost" id="vzOut" title="Ansicht verkleinern">−</button>
+      <b id="vzv">Fit</b>
+      <button class="ghost" id="vzIn" title="Ansicht vergrößern">+</button>
+      <button class="ghost" id="vzFit" title="Ansicht ins Fenster einpassen">Einpassen</button>
+      <span class="mini" style="margin:0;text-transform:none;letter-spacing:0">Strg + Scrollrad zoomt die Ansicht</span>
+      <span class="wsep"></span>
+      <label title="Grafik ohne Foto bauen — leere Fläche in Panelgröße"><input type="checkbox" id="emptyOn" style="accent-color:var(--orange)"> ohne Bild (leere Fläche)</label>
+    </div>
     <div class="canvas-area">
-      <div id="drop">Bild hierher ziehen oder klicken<br><small>PNG · JPG · WebP · SVG · beliebiges Format/Ratio</small></div>
+      <div id="drop">Bild hierher ziehen oder klicken<br><small>PNG · JPG · WebP · SVG · beliebiges Format/Ratio<br>oder oben <b>ohne Bild</b> anhaken und auf leerer Fläche bauen</small></div>
       <canvas id="cv" width="600" height="400" style="display:none"></canvas>
       <input id="file" type="file" accept="image/*,.svg" style="display:none">
     </div>
@@ -288,7 +311,7 @@
           </div>
           <label class="mini" style="margin-top:12px;display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)">
             <input type="checkbox" id="lyEyebrow" style="accent-color:var(--orange)"> Eyebrow (Pixel davor, gesperrt)</label>
-          <div id="lyEyeOpts" style="display:none;gap:8px;margin-top:8px;align-items:flex-end">
+          <div id="lyEyeOpts" style="display:none;gap:8px;margin-top:8px;align-items:flex-end;flex-wrap:wrap">
             <label class="mini" style="flex:1;display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink);margin-bottom:9px">
               <input type="checkbox" id="lyEyeCaps" checked style="accent-color:var(--orange)"> GROSS</label>
             <div><label class="mini">Pixel</label>
@@ -410,6 +433,16 @@ let titleScale=1, bodyScale=1;             // Textgrößen-Multiplikatoren
 let pixTpl='none', pixSize=0.06;           // Pixelgröße als Bruchteil der Breite
 let pixels=[], pixSel=-1;                  // einzelne Pixel {ax,ay,gx,gy,c}; ausgewählter Index
 let logoOn=true, logoCorner='tr', logoSource='zc', logoScale=0.14, blankMode=false, fontReady=false;
+let emptyMode=false;                       // Grafik ohne Quellbild: leere Fläche in Panelgröße
+let viewZoom=null;                         // Ansicht der Arbeitsfläche: null = ins Fenster einpassen, sonst Faktor
+// zetcom CD (Brand Guidelines): Produkt-Akzente + Neutral-Rampe — Auswahl unter jedem Farbfeld
+const CD_COLORS=[
+  ['#ff5900','Museum orange (Lead-Akzent)'],['#f5b400','Monument gelb'],['#d133c3','Art violett'],
+  ['#6432c9','Foundation purpur'],['#2a91ff','Manage blau'],['#3ec325','Eco grün'],
+  ['#000000','Schwarz'],['#191919','Grey 95'],['#454545','Grey 80'],['#6b6b6b','Grey 70 (muted)'],
+  ['#878787','Grey 60'],['#dadada','Grey 30'],['#ededed','Light grey'],['#f7f7f7','Extra light grey'],['#ffffff','Weiß']];
+const PAL_MARKS=[];                        // Aktiv-Marker der Palettenreihen (füllt attachPalette)
+function syncPalettes(){ PAL_MARKS.forEach(m=>m()); }
 let textBounds=null;                       // {x,y,w,h} in Ziel-px (für Hit-Test beim Ziehen)
 const LOGO_IMG={};                    // preloaded logo <img> by key
 const LOGO_SRC={};                    // Data-URL des Custom-Logos — nur fürs Speichern der Projektdatei
@@ -458,9 +491,9 @@ function applyPanelFormat(){
   document.getElementById('qwrap').style.display = fmt==='png'?'none':'';
 }
 
-// Pan/Zoom/Rotate haben bei Logos keinen Sinn (kein Crop) → Steuerung sperren
+// Pan/Zoom/Rotate haben bei Logos und ohne Quellbild keinen Sinn → Steuerung sperren
 function updateControls(){
-  const dis=isLogo();
+  const dis=isLogo()||!img;
   ['zoom','rot'].forEach(id=>document.getElementById(id).disabled=dis);
   ['rl','rr','flip','fit'].forEach(id=>document.getElementById(id).disabled=dis);
 }
@@ -505,6 +538,32 @@ function setupFrame(){
   if(ar>=1){ FW=Math.min(FW_MAX, FH_MAX*ar); FH=FW/ar; }
   else { FH=Math.min(FH_MAX, FW_MAX/ar); FW=FH*ar; }
   cv.width=Math.round(FW); cv.height=Math.round(FH); FW=cv.width; FH=cv.height;
+  applyViewZoom();
+}
+
+// ---- Ansicht der Arbeitsfläche (rein visuell, ändert Zuschnitt und Export nicht) ----
+const VZ_STEPS=[0.25,0.5,0.75,1,1.5,2,3,4];
+function viewFactor(){ // aktuell sichtbarer Faktor, auch im Fit-Modus
+  if(viewZoom!=null) return viewZoom;
+  const w=cv.getBoundingClientRect().width;
+  return w>0 ? w/FW : 1;
+}
+function applyViewZoom(){
+  const lbl=document.getElementById('vzv'); if(!lbl) return;
+  if(viewZoom==null){
+    cv.style.maxWidth=''; cv.style.maxHeight=''; cv.style.width=''; cv.style.height='';
+    lbl.textContent='Fit';
+  } else {
+    cv.style.maxWidth='none'; cv.style.maxHeight='none';
+    cv.style.width=Math.round(FW*viewZoom)+'px'; cv.style.height=Math.round(FH*viewZoom)+'px';
+    lbl.textContent=Math.round(viewZoom*100)+'%';
+  }
+}
+function setViewZoom(z){ viewZoom=Math.max(0.15, Math.min(6, z)); applyViewZoom(); }
+function stepViewZoom(dir){
+  const cur=viewFactor();
+  const next = dir>0 ? VZ_STEPS.find(s=>s>cur+0.001) : [...VZ_STEPS].reverse().find(s=>s<cur-0.001);
+  setViewZoom(next!=null? next : cur*(dir>0?1.25:0.8));
 }
 
 // ---- Fit image to cover the frame ----
@@ -527,10 +586,12 @@ function render(){
     ctx.translate(FW/2+tx, FH/2+ty); ctx.rotate(rot*Math.PI/180); ctx.scale(scale*flipX, scale);
     ctx.imageSmoothingQuality='high'; ctx.drawImage(img, -iw/2, -ih/2, iw, ih);
     ctx.restore();
+  } else if(emptyMode){ // leere Fläche: Exporthintergrund zeigen, transparent bleibt das CSS-Schachbrett
+    if(bg!=='transparent'){ ctx.fillStyle=bg; ctx.fillRect(0,0,FW,FH); }
   } else return;
   if(composerOn) drawComposer(ctx, FW, true);
   drawLayers(ctx, FW, true);
-  if(composerOn){ frameBorder(ctx, FW, FH); }
+  if(composerOn || !img){ frameBorder(ctx, FW, FH); document.getElementById('gapwarn').classList.remove('show'); }
   else { drawOverlay(); checkGap(); }
 }
 function frameBorder(g,w,h){ g.save(); g.strokeStyle='#111'; g.lineWidth=2; g.strokeRect(1,1,w-2,h-2); g.restore(); }
@@ -619,7 +680,9 @@ cv.addEventListener('pointermove',e=>{ if(!dragging)return;
   else { tx+=dx; ty+=dy; }
   lx=e.offsetX; ly=e.offsetY; render();});
 cv.addEventListener('pointerup',e=>{dragging=false;dragMode='none';cv.classList.remove('drag');});
-cv.addEventListener('wheel',e=>{if(!img||isLogo())return;e.preventDefault();
+cv.addEventListener('wheel',e=>{
+  if(e.ctrlKey){ e.preventDefault(); stepViewZoom(e.deltaY<0?1:-1); return; }   // Strg = Ansicht zoomen
+  if(!img||isLogo())return;e.preventDefault();
   const r=cv.width/cv.getBoundingClientRect().width;
   const cx=e.offsetX*r, cy=e.offsetY*r;
   const f=e.deltaY<0?1.08:1/1.08;
@@ -643,7 +706,14 @@ document.getElementById('rr').onclick=()=>bump(90);
 function bump(d){rot=((rot+d+180)%360+360)%360-180;document.getElementById('rot').value=rot;document.getElementById('rotv').textContent=rot+'°';render();}
 document.getElementById('flip').onclick=()=>{flipX*=-1;render();};
 document.getElementById('fit').onclick=()=>{fitCover();render();};
-document.getElementById('clear').onclick=()=>{img=null;imgSrc=null;trim=null;document.getElementById('file').value='';showDrop(true);};
+document.getElementById('clear').onclick=()=>{img=null;imgSrc=null;trim=null;document.getElementById('file').value='';
+  updateBlank(); updateControls(); setupFrame(); render(); syncMeta();};
+// ---- Arbeitsfläche: Ansicht zoomen + ohne Bild arbeiten ----
+document.getElementById('vzIn').onclick=()=>stepViewZoom(1);
+document.getElementById('vzOut').onclick=()=>stepViewZoom(-1);
+document.getElementById('vzFit').onclick=()=>{viewZoom=null;applyViewZoom();};
+document.getElementById('emptyOn').onchange=e=>{ emptyMode=e.target.checked;
+  updateBlank(); updateControls(); setupFrame(); render(); syncMeta(); };
 document.getElementById('clear2')?.addEventListener?.('click',()=>{});
 
 // ---- Format / quality / bg controls ----
@@ -658,7 +728,7 @@ document.querySelectorAll('.sw').forEach(s=>s.onclick=()=>{
   if(s.dataset.bg==='transparent'&&fmt==='jpeg'){alert('JPG kann keine Transparenz. Für transparenten Hintergrund WebP oder PNG wählen.');return;}
   bg=s.dataset.bg; setSwatch(bg); render();
 });
-function setSwatch(v){document.querySelectorAll('.sw').forEach(s=>s.classList.toggle('active',s.dataset.bg===v));}
+function setSwatch(v){document.querySelectorAll('.sw').forEach(s=>s.classList.toggle('active',s.dataset.bg===v));syncPalettes();}
 
 // ---- Meta panel ----
 function syncMeta(){
@@ -677,7 +747,7 @@ function syncMeta(){
 const drop=document.getElementById('drop'), fileIn=document.getElementById('file');
 function showDrop(v){drop.classList.toggle('hidden',!v);cv.style.display=v?'none':'';
   document.getElementById('tools').style.display=v?'none':'flex';document.getElementById('export').disabled=v;}
-document.querySelector('.canvas-area').addEventListener('click',()=>{if(!img)fileIn.click();});
+document.querySelector('.canvas-area').addEventListener('click',()=>{if(!img && !blankMode)fileIn.click();});
 fileIn.onchange=e=>{if(e.target.files[0])dropFile(e.target.files[0]);};
 ['dragover','dragenter'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('hot');}));
 ['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();if(ev==='drop'&&e.dataTransfer.files[0])dropFile(e.dataTransfer.files[0]);drop.classList.remove('hot');}));
@@ -729,6 +799,7 @@ async function loadFile(file){
   try{
     const {img:bmp, src}=await decodeImageFile(file);
     img=bmp; imgSrc=src; iw=bmp.naturalWidth||bmp.width; ih=bmp.naturalHeight||bmp.height; computeTrim();
+    if(emptyMode){ emptyMode=false; document.getElementById('emptyOn').checked=false; blankMode=composerOn&&bgMode!=='photo'; }
     if(!document.getElementById('fname').value){
       document.getElementById('fname').value=file.name.replace(/\.[^.]+$/,'').toLowerCase().replace(/[_\s]+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'');
     }
@@ -754,13 +825,15 @@ document.getElementById('export').onclick=async()=>{
     o.fillStyle=bgMode==='black'?'#000':bgMode==='gray'?'#f7f7f7':'#fff'; o.fillRect(0,0,TW,TH);
     drawComposer(o,TW); drawLayers(o,TW);
   } else {
-    const k=TW/FW; // display→target scale (uniform, aspect preserved)
-    o.save();
-    o.translate(TW/2+tx*k, TH/2+ty*k);
-    o.rotate(rot*Math.PI/180);
-    o.scale(scale*k*flipX, scale*k);
-    o.drawImage(img, -iw/2, -ih/2, iw, ih);
-    o.restore();
+    if(img){ // ohne Quellbild (leere Fläche) bleibt nur der Exporthintergrund von oben
+      const k=TW/FW; // display→target scale (uniform, aspect preserved)
+      o.save();
+      o.translate(TW/2+tx*k, TH/2+ty*k);
+      o.rotate(rot*Math.PI/180);
+      o.scale(scale*k*flipX, scale*k);
+      o.drawImage(img, -iw/2, -ih/2, iw, ih);
+      o.restore();
+    }
     if(composerOn) drawComposer(o,TW);
     drawLayers(o,TW);
   }
@@ -954,7 +1027,7 @@ const prodSel=document.getElementById('product');
 Object.keys(ACCENTS).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=ACCENT_LABEL[k];prodSel.appendChild(o);});
 prodSel.appendChild(Object.assign(document.createElement('option'),{value:'custom',textContent:'Custom-Farbe …'}));
 function updateBlank(){
-  blankMode = composerOn && bgMode!=='photo';
+  blankMode = emptyMode || (composerOn && bgMode!=='photo');
   showDrop(!(img||blankMode));
   document.getElementById('export').disabled = !(img||blankMode);
 }
@@ -965,7 +1038,8 @@ $('compOn').onchange=e=>{ composerOn=e.target.checked; $('compBody').style.displ
 $('composerHead').addEventListener('click',e=>{ if(e.target.closest('input,label')) return;
   const cb=$('compOn'); cb.checked=!cb.checked; cb.dispatchEvent(new Event('change')); });
 $('bgMode').onchange=e=>{ bgMode=e.target.value; $('overlayWrap').style.display=bgMode==='photo'?'':'none'; updateBlank(); render(); };
-prodSel.onchange=e=>{ product=e.target.value; $('accentCustom').style.display = product==='custom'?'block':'none'; render(); };
+prodSel.onchange=e=>{ product=e.target.value; $('accentCustom').style.display = product==='custom'?'block':'none';
+  syncAccentPalette(); render(); };
 $('accentCustom').oninput=e=>{ accentCustom=e.target.value; render(); };
 $('eyebrow').oninput=e=>{ eyebrowTxt=e.target.value; render(); };
 $('eyebrowCaps').onchange=e=>{ eyebrowCaps=e.target.checked; render(); };
@@ -985,7 +1059,7 @@ $('pixSize').oninput=e=>{ pixSize=+e.target.value/1000; $('pxv').textContent=(pi
 $('pixColor').oninput=e=>{ if(pixSel>=0){ pixels[pixSel].c=e.target.value; render(); } };
 $('pixDelete').onclick=()=>{ if(pixSel>=0){ pixels.splice(pixSel,1); pixSel=-1; updatePixUI(); render(); } };
 $('pixDeselect').onclick=()=>{ pixSel=-1; updatePixUI(); render(); };
-function updatePixUI(){ const wrap=$('pixSelWrap'); if(pixSel>=0){ wrap.style.display='block'; $('pixColor').value=pixels[pixSel].c; } else wrap.style.display='none'; }
+function updatePixUI(){ const wrap=$('pixSelWrap'); if(pixSel>=0){ wrap.style.display='block'; $('pixColor').value=pixels[pixSel].c; } else wrap.style.display='none'; syncPalettes(); }
 $('logoOn').onchange=e=>{ logoOn=e.target.checked; $('logoOpts').style.opacity=logoOn?1:.4; render(); };
 $('logoSource').onchange=e=>{ logoSource=e.target.value; $('logoUpload').style.display = logoSource==='custom'?'block':'none'; render(); };
 $('logoCorner').onchange=e=>{ logoCorner=e.target.value; render(); };
@@ -1011,7 +1085,8 @@ const LAYER_FONTS=[
   {v:'"Palatino Linotype", Palatino, "Book Antiqua", serif', l:'Palatino (Serif)'},
   {v:'Impact, "Arial Narrow Bold", sans-serif', l:'Impact'},
 ];
-const LAYER_WEIGHTS=[['300','Light'],['400','Regular'],['500','Medium'],['600','Semibold'],['700','Bold'],['800','Extrabold']];
+// DM Sans ist als Variable Font eingebettet (wght 100–1000) — Thin und Extra Light gehen echt, nicht simuliert
+const LAYER_WEIGHTS=[['100','Thin'],['200','Extra Light'],['300','Light'],['400','Regular'],['500','Medium'],['600','Semibold'],['700','Bold'],['800','Extrabold']];
 (function initLayerSelects(){
   LAYER_FONTS.forEach(f=>$('lyFont').appendChild(Object.assign(document.createElement('option'),{value:f.v,textContent:f.l})));
   LAYER_WEIGHTS.forEach(([v,l])=>$('lyWeight').appendChild(Object.assign(document.createElement('option'),{value:v,textContent:l})));
@@ -1125,6 +1200,7 @@ function syncLayerEditor(){
     $('lyOpac').value=Math.round(op*100); $('lyOpacV').textContent=Math.round(op*100)+'%';
     $('lyRot').value=L.rot||0; $('lyRotV').textContent=(L.rot||0)+'°';
   }
+  syncPalettes();
 }
 function addTextLayer(){
   const off=Math.min(0.3, layers.filter(l=>l.type==='text').length*0.06);
@@ -1224,6 +1300,7 @@ function projectState(){
     pixels:{ tpl:pixTpl, size:pixSize,
              items:pixels.map(p=>({ax:p.ax, ay:p.ay, gx:p.gx, gy:p.gy, c:p.c})) },
     logo:{ on:logoOn, corner:logoCorner, source:logoSource, scale:logoScale, customSrc:LOGO_SRC.custom||null },
+    empty: emptyMode,
     layers: layers.map(L=> L.type==='text'
       ? { type:'text', text:L.text, font:L.font, weight:L.weight, italic:!!L.italic,
           color:L.color, align:L.align, sizePct:L.sizePct, xPct:L.xPct, yPct:L.yPct,
@@ -1267,6 +1344,7 @@ async function applyProject(P){
   const out=P.output||{};
   fmt=out.fmt||panel.fmt; quality=out.quality!=null?out.quality:panel.q; bg=out.bg||'transparent';
   if(fmt==='jpeg' && bg==='transparent') bg='#ffffff';
+  emptyMode=!!P.empty;   // Projekt ohne Quellbild (leere Fläche)
 
   // ---- Composer ----
   const c=P.composer||{};
@@ -1336,6 +1414,7 @@ async function applyProject(P){
 // Alle Sidebar-Controls auf den geladenen State ziehen (die oninput-Handler laufen dabei nicht mit).
 function syncProjectUI(){
   $('panel').value=panel.id;
+  $('emptyOn').checked=emptyMode;
   $('q').value=quality; $('qv').textContent=quality;
   document.querySelectorAll('#fmtbtns button').forEach(b=>b.classList.toggle('active',b.dataset.f===fmt));
   $('qwrap').style.display=fmt==='png'?'none':'';
@@ -1347,6 +1426,7 @@ function syncProjectUI(){
   $('bgMode').value=bgMode; $('overlayWrap').style.display=bgMode==='photo'?'':'none';
   prodSel.value=product;
   $('accentCustom').value=accentCustom; $('accentCustom').style.display=product==='custom'?'block':'none';
+  syncAccentPalette();
   $('eyebrow').value=eyebrowTxt; $('eyebrowCaps').checked=eyebrowCaps;
   $('title').value=titleTxt; $('subline').value=sublineTxt; $('meta').value=metaTxt;
   $('ctaOn').checked=ctaOn; $('ctaOpts').style.display=ctaOn?'flex':'none';
@@ -1368,7 +1448,48 @@ function syncProjectUI(){
   const pct=coverScale? Math.round(scale/coverScale*100) : 100;
   $('zoom').value=Math.max(20,Math.min(600,pct)); $('zoomv').textContent=pct+'%';
   $('rot').value=rot; $('rotv').textContent=rot+'°';
+  syncPalettes();
 }
+
+// ---- CD-Paletten: unter jedem Farbfeld die Brand-Farben zum Anklicken ----
+// Hängt eine Swatch-Reihe hinter das Element `after` und schreibt beim Klick in das Farbfeld
+// (input+change feuern, damit die bestehenden Handler ganz normal greifen).
+const PAL_BOX={};
+function attachPalette(inputId, after){
+  const inp=$(inputId); if(!inp) return null;
+  const box=document.createElement('div'); box.className='pal'; PAL_BOX[inputId]=box;
+  const mark=()=>{ const v=(inp.value||'').toLowerCase();
+    [...box.children].forEach(el=>el.classList.toggle('on', el.dataset.c===v)); };
+  CD_COLORS.forEach(([hex,name])=>{
+    const s=document.createElement('i'); s.style.background=hex; s.dataset.c=hex; s.title=name+' '+hex.toUpperCase();
+    s.onclick=()=>{ inp.value=hex; inp.dispatchEvent(new Event('input')); inp.dispatchEvent(new Event('change')); mark(); };
+    box.appendChild(s);
+  });
+  (after||inp).insertAdjacentElement('afterend', box);
+  inp.addEventListener('input', mark); mark();
+  PAL_MARKS.push(mark);
+  return box;
+}
+attachPalette('accentCustom', $('accentCustom').parentElement);            // Composer: Custom-Akzentfarbe
+attachPalette('pixColor',     $('pixColor').parentElement);                // Pixel-Dekor: Farbe des gewählten Pixels
+attachPalette('lyColor',      $('lyColor').parentElement.parentElement);   // Textebene: Schriftfarbe
+// Eyebrow-Palette in den Eyebrow-Block hängen, damit sie mit ihm auf-/zugeht
+attachPalette('lyPixColor',   $('lyEyeOpts'));
+$('lyEyeOpts').appendChild(PAL_BOX.lyPixColor); PAL_BOX.lyPixColor.style.flex='0 0 100%';
+// Custom-Akzent nur zeigen, wenn „Custom-Farbe …" gewählt ist (wie das Farbfeld selbst)
+function syncAccentPalette(){ PAL_BOX.accentCustom.style.display = product==='custom'?'flex':'none'; }
+// Exporthintergrund: gleiche Palette zusätzlich zu den drei Standard-Swatches
+(function bgPalette(){
+  const box=document.createElement('div'); box.className='pal';
+  const mark=()=>[...box.children].forEach(el=>el.classList.toggle('on', el.dataset.c===bg));
+  const pick=v=>{ if(v==='transparent'&&fmt==='jpeg'){alert('JPG kann keine Transparenz. Für transparenten Hintergrund WebP oder PNG wählen.');return;}
+    bg=v; setSwatch(v); mark(); render(); };
+  CD_COLORS.forEach(([hex,name])=>{ const s=document.createElement('i');
+    s.style.background=hex; s.dataset.c=hex; s.title=name+' '+hex.toUpperCase(); s.onclick=()=>pick(hex); box.appendChild(s); });
+  document.querySelector('.swatches').insertAdjacentElement('afterend', box);
+  PAL_MARKS.push(mark); mark();
+})();
+syncAccentPalette();
 
 $('saveProject').onclick=()=>saveProject();
 $('openProject').onclick=()=>$('projectFile').click();
