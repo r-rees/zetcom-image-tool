@@ -286,6 +286,14 @@
             <label>Schriftgröße <b id="lySizeV">—</b></label>
             <input id="lySize" type="range" min="10" max="260" value="50">
           </div>
+          <label class="mini" style="margin-top:12px;display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)">
+            <input type="checkbox" id="lyEyebrow" style="accent-color:var(--orange)"> Eyebrow (Pixel davor, gesperrt)</label>
+          <div id="lyEyeOpts" style="display:none;gap:8px;margin-top:8px;align-items:flex-end">
+            <label class="mini" style="flex:1;display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink);margin-bottom:9px">
+              <input type="checkbox" id="lyEyeCaps" checked style="accent-color:var(--orange)"> GROSS</label>
+            <div><label class="mini">Pixel</label>
+              <input id="lyPixColor" type="color" value="#ff5900" style="width:40px;height:38px;padding:0;border:1px solid var(--line);border-radius:2px"></div>
+          </div>
         </div>
         <div id="imgLayerCtl" style="display:none">
           <div class="ctl" style="min-width:0"><label>Breite <b id="lyImgSizeV">30%</b></label>
@@ -821,6 +829,16 @@ function wrapLines(g, raw, size, maxW, kind){    // → Zeilen aus {t,bold,w,pre
 const lineW = ln => ln.reduce((a,wd)=>a+wd.pre+wd.w,0);
 const groupW = lines => lines.reduce((mx,ln)=>Math.max(mx,lineW(ln)),0);
 
+// Optische Mitte einer Textzeile (Versalband) für die aktuell gesetzte Schrift.
+// yTop = Zeilenoberkante bei textBaseline='top', f = Canvas-Faktor. Rückgabe in Logik-Pixeln.
+// Damit sitzt der Eyebrow-Pixel mittig zum Text und nicht mittig zur em-Box (die oben Luft
+// und unten Platz für Unterlängen hat und den Pixel dadurch zu hoch schiebt).
+function capMidY(g,f,yTop,fontSize){
+  const m=g.measureText('H');
+  if(!m || m.actualBoundingBoxAscent==null || m.actualBoundingBoxDescent==null) return yTop+fontSize/2;
+  return yTop + (m.actualBoundingBoxDescent - m.actualBoundingBoxAscent)/(2*f);
+}
+
 function drawCompText(g,f,TW,TH,M){
   const col=compTextColor(), acc=accentHex(), mut=mutedColor(), centered=textAlign==='center';
   const eySize=Math.round(Math.max(13,TW*0.017)*bodyScale), tSize=Math.round(Math.min(TW*0.075,TH*0.24)*titleScale);
@@ -866,7 +884,8 @@ function drawCompText(g,f,TW,TH,M){
     g.font=`400 ${eySize*f}px "DM Sans"`; g.letterSpacing=(0.08*eySize*f)+'px';
     const tw=g.measureText(eyText).width/f, gapSq=eySize*0.5, totalW=sq+gapSq+tw;
     let ex = centered? (TW-totalW)/2 : bx0;
-    g.fillStyle=acc; g.fillRect(ex*f,(y+(eySize-sq)/2)*f,sq*f,sq*f);
+    const sqY = capMidY(g,f,y,eySize) - sq/2;
+    g.fillStyle=acc; g.fillRect(ex*f,sqY*f,sq*f,sq*f);
     g.fillText(eyText,(ex+sq+gapSq)*f,y*f); g.letterSpacing='0px'; y+=eySize+gEyT;
   }
   for(const ln of tLines){ drawRunLine(ln,tSize,'title'); y+=tLH; }
@@ -1009,16 +1028,27 @@ function drawLayers(g, cw, interactive){
   });
 }
 function drawTextLayer(g,f,TW,TH,L,selected){
-  const size=Math.max(6, L.sizePct*TW);
-  g.save(); g.textBaseline='top'; g.letterSpacing='0px';
+  const size=Math.max(6, L.sizePct*TW), eye=!!L.eyebrow;
+  g.save(); g.textBaseline='top';
+  g.letterSpacing = eye? (0.08*size*f)+'px' : '0px';
   g.font=`${L.italic?'italic ':''}${L.weight} ${size*f}px ${L.font}`;
-  const lines=(L.text||'').split('\n'), lh=size*1.22;
+  let src=L.text||'';
+  if(eye && L.eyeCaps!==false) src=src.toUpperCase();
+  const lines=src.split('\n'), lh=size*1.22;
+  // Eyebrow: Akzent-Pixel vor der ersten Zeile, alle Zeilen um Pixel + Abstand eingerückt
+  const sq = eye? Math.max(6, Math.round(size*0.85)) : 0, gapSq = eye? size*0.5 : 0, ind = eye? sq+gapSq : 0;
   let maxw=1; const ws=lines.map(ln=>{ const w=g.measureText(ln).width/f; if(w>maxw)maxw=w; return w; });
   const blockH=Math.max(lines.length,1)*lh, x0=L.xPct*TW, y0=L.yPct*TH;
+  if(eye){
+    const sqY = capMidY(g,f,y0,size) - sq/2;
+    g.fillStyle = L.pixColor || accentHex();
+    g.fillRect(x0*f, sqY*f, sq*f, sq*f);
+  }
   g.fillStyle=L.color;
-  lines.forEach((ln,li)=>{ let x=x0;
-    if(L.align==='center') x=x0+(maxw-ws[li])/2; else if(L.align==='right') x=x0+(maxw-ws[li]);
+  lines.forEach((ln,li)=>{ let x=x0+ind;
+    if(L.align==='center') x+= (maxw-ws[li])/2; else if(L.align==='right') x+= (maxw-ws[li]);
     g.fillText(ln, x*f, (y0+li*lh)*f); });
+  maxw+=ind;
   L._b={x:x0,y:y0,w:maxw,h:blockH};
   if(selected){ g.strokeStyle='#111'; g.lineWidth=1.5; g.setLineDash([5,4]);
     g.strokeRect(x0*f-4,y0*f-4,maxw*f+8,blockH*f+8); g.setLineDash([]); }
@@ -1047,7 +1077,7 @@ function layerHit(px,py,TW,TH){
 function layerLabel(L){
   if(L.type==='image') return '🖼 Bild';
   const t=(L.text||'').replace(/\n/g,' ').trim();
-  return '¶ '+(t ? (t.length>22?t.slice(0,22)+'…':t) : 'Textfeld');
+  return (L.eyebrow?'▪ ':'¶ ')+(t ? (t.length>22?t.slice(0,22)+'…':t) : 'Textfeld');
 }
 function renderLayerList(){
   const box=$('layerList'); box.innerHTML='';
@@ -1087,6 +1117,8 @@ function syncLayerEditor(){
     $('lyText').value=L.text||''; $('lyFont').value=L.font; $('lyWeight').value=L.weight;
     $('lyItalic').checked=!!L.italic; $('lyAlign').value=L.align; $('lyColor').value=L.color;
     $('lySize').value=Math.round(L.sizePct*1000); $('lySizeV').textContent=Math.round(L.sizePct*TW)+'px';
+    $('lyEyebrow').checked=!!L.eyebrow; $('lyEyeOpts').style.display=L.eyebrow?'flex':'none';
+    $('lyEyeCaps').checked=L.eyeCaps!==false; $('lyPixColor').value=L.pixColor||accentHex();
   } else {
     const op=L.opacity!=null?L.opacity:1;
     $('lyImgSize').value=Math.round(L.wPct*100); $('lyImgSizeV').textContent=Math.round(L.wPct*100)+'%';
@@ -1097,7 +1129,8 @@ function syncLayerEditor(){
 function addTextLayer(){
   const off=Math.min(0.3, layers.filter(l=>l.type==='text').length*0.06);
   layers.push({type:'text', text:'Neuer Text', font:'"DM Sans"', weight:'700', italic:false,
-    color: composerOn? compTextColor() : '#ffffff', align:'left', sizePct:0.05, xPct:0.1+off, yPct:0.1+off});
+    color: composerOn? compTextColor() : '#ffffff', align:'left', sizePct:0.05, xPct:0.1+off, yPct:0.1+off,
+    eyebrow:false, eyeCaps:true, pixColor:accentHex()});
   selectLayer(layers.length-1);
 }
 async function addImageLayerFromFile(file){
@@ -1118,6 +1151,12 @@ $('lyItalic').onchange=e=>{ if(curL()){ curL().italic=e.target.checked; render()
 $('lyAlign').onchange=e=>{ if(curL()){ curL().align=e.target.value; render(); } };
 $('lyColor').oninput=e=>{ if(curL()){ curL().color=e.target.value; render(); } };
 $('lySize').oninput=e=>{ if(curL()){ curL().sizePct=+e.target.value/1000; $('lySizeV').textContent=Math.round(curL().sizePct*targetHW()[0])+'px'; render(); } };
+$('lyEyebrow').onchange=e=>{ if(curL()){ const L=curL(); L.eyebrow=e.target.checked;
+  if(L.eyebrow){ if(L.eyeCaps==null) L.eyeCaps=true; if(!L.pixColor) L.pixColor=accentHex(); }
+  $('lyEyeOpts').style.display=L.eyebrow?'flex':'none'; $('lyEyeCaps').checked=L.eyeCaps!==false;
+  $('lyPixColor').value=L.pixColor||accentHex(); render(); renderLayerList(); } };
+$('lyEyeCaps').onchange=e=>{ if(curL()){ curL().eyeCaps=e.target.checked; render(); } };
+$('lyPixColor').oninput=e=>{ if(curL()){ curL().pixColor=e.target.value; render(); } };
 $('lyImgSize').oninput=e=>{ if(curL()){ curL().wPct=+e.target.value/100; $('lyImgSizeV').textContent=e.target.value+'%'; render(); } };
 $('lyOpac').oninput=e=>{ if(curL()){ curL().opacity=+e.target.value/100; $('lyOpacV').textContent=e.target.value+'%'; render(); } };
 $('lyRot').oninput=e=>{ if(curL()){ curL().rot=+e.target.value; $('lyRotV').textContent=e.target.value+'°'; render(); } };
@@ -1187,7 +1226,8 @@ function projectState(){
     logo:{ on:logoOn, corner:logoCorner, source:logoSource, scale:logoScale, customSrc:LOGO_SRC.custom||null },
     layers: layers.map(L=> L.type==='text'
       ? { type:'text', text:L.text, font:L.font, weight:L.weight, italic:!!L.italic,
-          color:L.color, align:L.align, sizePct:L.sizePct, xPct:L.xPct, yPct:L.yPct }
+          color:L.color, align:L.align, sizePct:L.sizePct, xPct:L.xPct, yPct:L.yPct,
+          eyebrow:!!L.eyebrow, eyeCaps:L.eyeCaps!==false, pixColor:L.pixColor||null }
       : { type:'image', src:L.src||null, wPct:L.wPct, opacity:L.opacity, rot:L.rot, xPct:L.xPct, yPct:L.yPct }),
   };
 }
@@ -1269,7 +1309,8 @@ async function applyProject(P){
     if(L.type==='text'){
       layers.push({type:'text', text:L.text||'', font:L.font||'"DM Sans"', weight:L.weight||'700',
         italic:!!L.italic, color:L.color||'#ffffff', align:L.align||'left',
-        sizePct:L.sizePct||0.05, xPct:L.xPct||0.1, yPct:L.yPct||0.1});
+        sizePct:L.sizePct||0.05, xPct:L.xPct||0.1, yPct:L.yPct||0.1,
+        eyebrow:!!L.eyebrow, eyeCaps:L.eyeCaps!==false, pixColor:L.pixColor||accentHex()});
     } else if(L.type==='image' && L.src){
       try{
         const im=await decodeImageSrc(L.src);
