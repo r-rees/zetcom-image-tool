@@ -164,6 +164,28 @@
       <div class="note" id="panelnote"></div>
     </div>
 
+    <!-- FLÄCHE & AKZENT — global, gilt auch ohne Text-Composer -->
+    <div class="block acc" id="surfaceSection">
+      <h2 class="acc-h">Fläche &amp; Akzent</h2>
+      <label class="mini">Hintergrund</label>
+      <select id="bgMode">
+        <option value="photo">Foto (Upload)</option>
+        <option value="black">Schwarz (Statement)</option>
+        <option value="white">Weiß</option>
+        <option value="gray">Hellgrau #F7F7F7</option>
+      </select>
+      <label class="mini" style="margin-top:10px">Produkt-Akzent (eine Farbe)</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="product" style="flex:1"></select>
+        <input id="accentCustom" type="color" value="#ff5900" title="Custom-Farbe" style="width:38px;height:38px;padding:0;border:1px solid var(--line);border-radius:2px;display:none">
+      </div>
+      <div class="ctl" id="overlayWrap" style="margin-top:12px;min-width:0">
+        <label>Abdunklung (Foto) <b id="opv">0%</b></label>
+        <input id="overlayOp" type="range" min="0" max="80" value="0">
+      </div>
+      <div class="note">Akzent gilt für Composer-Titel, Eyebrow-Pixel, Pixel-Dekor und neue Textebenen. Die Abdunklung liegt flach über dem Foto (kein Gradient) und funktioniert unabhängig vom Composer.</div>
+    </div>
+
     <div class="block" id="composerSection">
       <h2 id="composerHead" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none">
         <span style="display:flex;align-items:center;gap:12px">Text-Composer
@@ -172,18 +194,7 @@
         <span id="compChev" style="color:var(--mut);font-size:11px;transition:transform .15s;transform:rotate(-90deg)">▾</span>
       </h2>
       <div id="compBody" style="display:none">
-        <label class="mini">Hintergrund</label>
-        <select id="bgMode">
-          <option value="photo">Foto (Upload)</option>
-          <option value="black">Schwarz (Statement)</option>
-          <option value="white">Weiß</option>
-          <option value="gray">Hellgrau #F7F7F7</option>
-        </select>
-        <label class="mini" style="margin-top:10px">Produkt-Akzent (eine Farbe)</label>
-        <div style="display:flex;gap:8px;align-items:center">
-          <select id="product" style="flex:1"></select>
-          <input id="accentCustom" type="color" value="#ff5900" title="Custom-Farbe" style="width:38px;height:38px;padding:0;border:1px solid var(--line);border-radius:2px;display:none">
-        </div>
+        <div class="note" style="margin-top:0">Festes Textlayout: Eyebrow, Titel, Subline, Zusatzzeile, CTA, als <b>ein</b> optisch ausgerichteter Block. Abdunklung, Pixel-Dekor, Logo und Pinsel liegen in eigenen Abschnitten und gehen auch ohne Composer.</div>
 
         <label class="mini" style="margin-top:12px;display:flex;justify-content:space-between;align-items:center">Eyebrow (klein, Akzent)
           <span style="text-transform:none;letter-spacing:0;font-weight:400;display:flex;gap:5px;align-items:center;cursor:pointer">
@@ -212,59 +223,10 @@
         </div>
         <div style="display:flex;gap:8px;margin-top:10px">
           <div style="flex:1"><label class="mini">Textausrichtung</label>
-            <select id="textAlign"><option value="left">links</option><option value="center">zentriert</option></select></div>
+            <select id="textAlign"><option value="left">links</option><option value="center">zentriert</option><option value="right">rechts</option></select></div>
           <div style="flex:1;display:flex;align-items:flex-end"><button class="ghost" id="resetText" style="width:100%">Position ↺</button></div>
         </div>
-        <div class="note" style="margin-top:6px">Textblock direkt im Bild <b>ziehen</b> zum Verschieben.</div>
-
-        <div class="ctl" id="overlayWrap" style="margin-top:12px">
-          <label>Abdunklung (Foto) <b id="opv">35%</b></label>
-          <input id="overlayOp" type="range" min="0" max="70" value="35">
-        </div>
-
-        <h2 style="margin-top:16px">Pixel-Dekor</h2>
-        <select id="pixTpl">
-          <option value="none">keins</option>
-          <option value="corners6">Ecken diagonal (6 Farben)</option>
-          <option value="team6">Team/Foto (6 Farben)</option>
-          <option value="sparse6">sparsam diagonal (6 Farben)</option>
-          <option value="accentPair">Akzent-Paar (eine Farbe)</option>
-        </select>
-        <div class="ctl" style="margin-top:8px">
-          <label>Pixelgröße (Ecke-an-Ecke) <b id="pxv">6.0%</b></label>
-          <input id="pixSize" type="range" min="20" max="140" value="60">
-        </div>
-        <div id="pixSelWrap" style="display:none;margin-top:8px">
-          <label class="mini">Ausgewählter Pixel</label>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input id="pixColor" type="color" style="width:38px;height:34px;padding:0;border:1px solid var(--line);border-radius:2px">
-            <button class="ghost" id="pixDelete" style="flex:1">entfernen</button>
-            <button class="ghost" id="pixDeselect">abwählen</button>
-          </div>
-        </div>
-        <div class="note" style="margin-top:4px">Vorgefertigt · Pixel <b>anklicken</b> = auswählen/umfärben, <b>ziehen</b> = verschieben. Vergrößern hält Paare Ecke an Ecke.</div>
-
-        <h2 style="margin-top:16px">Logo</h2>
-        <label class="mini" style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0">
-          <input type="checkbox" id="logoOn" checked style="accent-color:var(--orange)"> einblenden</label>
-        <div id="logoOpts" style="margin-top:6px">
-          <div style="display:flex;gap:8px">
-            <div style="flex:1"><label class="mini">Variante</label>
-              <select id="logoSource">
-                <option value="zc">zetcom (helle BG)</option>
-                <option value="zcDark">zetcom (dunkle BG)</option>
-                <option value="custom">Custom-Upload</option>
-              </select></div>
-            <div style="flex:1"><label class="mini">Ecke</label>
-              <select id="logoCorner"><option value="tr">oben rechts</option><option value="tl">oben links</option><option value="br">unten rechts</option><option value="bl">unten links</option></select></div>
-          </div>
-          <input id="logoUpload" type="file" accept="image/*,.svg" style="margin-top:6px;font-size:12px;display:none">
-          <div class="ctl" style="margin-top:8px">
-            <label>Logo-Größe <b id="lsv">14%</b></label>
-            <input id="logoScale" type="range" min="6" max="34" value="14">
-          </div>
-        </div>
-        <div class="note" style="margin-top:8px">Regeln aus zetcom-graphics: eine Akzentfarbe, Sentence-case, DM Sans, kein Gradient. CD-perfekte Cards: <b>zetcom-graphics</b>-Skill.</div>
+        <div class="note" style="margin-top:6px">Textblock direkt im Bild <b>ziehen</b> zum Verschieben, in jeder Ausrichtung. Ohne Verschieben sitzt der Block optisch bündig im Rand: Grundlinie unten, Versalhöhe links. Regeln aus zetcom-graphics: eine Akzentfarbe, Sentence-case, DM Sans, kein Gradient.</div>
       </div>
     </div>
 
@@ -332,7 +294,83 @@
           <button class="ghost" id="lyDelete" style="flex:1">löschen</button>
         </div>
       </div>
-      <div class="note">Elemente direkt im Bild <b>ziehen</b>. <b>Umschalt-/Cmd-Klick</b> (Liste oder Bild) wählt mehrere aus → dann zueinander ausrichten &amp; verteilen; mehrere Ausgewählte ziehen gemeinsam. Klick daneben hebt die Auswahl auf. Ebenen liegen über Foto, Composer-Text &amp; Logo. Benötigt ein geladenes Bild oder Vollton-Hintergrund.</div>
+      <div class="note">Elemente direkt im Bild <b>ziehen</b>. <b>Umschalt-/Cmd-Klick</b> (Liste oder Bild) wählt mehrere aus → dann zueinander ausrichten &amp; verteilen; mehrere Ausgewählte ziehen gemeinsam. Klick daneben hebt die Auswahl auf. Ausrichten arbeitet mit der <b>optischen</b> Textkante (Versalhöhe/Grundlinie), nicht mit der em-Box. Ebenen liegen über Foto, Composer-Text &amp; Logo. Benötigt ein geladenes Bild oder Vollton-Hintergrund.</div>
+    </div>
+
+    <!-- PINSEL — freihand malen, global (kein Composer nötig) -->
+    <div class="block acc" id="brushSection">
+      <h2 class="acc-h">Pinsel</h2>
+      <label class="mini" style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)">
+        <input type="checkbox" id="brushOn" style="accent-color:var(--orange)"> Pinsel-Modus (im Bild malen statt verschieben)</label>
+      <div id="brushOpts" style="margin-top:8px;opacity:.45">
+        <label class="mini">Farbe</label>
+        <input id="brushColor" type="color" value="#ff5900" style="width:100%;height:38px;padding:0;border:1px solid var(--line);border-radius:2px">
+        <div class="ctl" style="margin-top:10px;min-width:0"><label>Pinselgröße <b id="brSizeV">2.0%</b></label>
+          <input id="brushSize" type="range" min="2" max="140" value="20"></div>
+        <div class="ctl" style="margin-top:10px;min-width:0"><label>Deckkraft <b id="brOpacV">100%</b></label>
+          <input id="brushOpacity" type="range" min="5" max="100" value="100"></div>
+        <div class="ctl" style="margin-top:10px;min-width:0"><label>Weiche Kante <b id="brSoftV">0%</b></label>
+          <input id="brushSoft" type="range" min="0" max="100" value="0"></div>
+        <label class="mini" style="margin-top:12px;display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)">
+          <input type="checkbox" id="brushErase" style="accent-color:var(--orange)"> Radierer (löscht nur Pinselstriche)</label>
+        <label class="mini" style="margin-top:6px;display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)">
+          <input type="checkbox" id="brushUnder" style="accent-color:var(--orange)"> hinter Text, Ebenen &amp; Logo malen</label>
+        <div class="btnrow" style="margin-top:12px">
+          <button class="ghost" id="brushUndo" style="flex:1">Strich zurück</button>
+          <button class="ghost" id="brushClear" style="flex:1">alle löschen</button>
+        </div>
+      </div>
+      <div class="note" id="brushNote">Noch keine Striche.</div>
+    </div>
+
+    <!-- PIXEL-DEKOR — global -->
+    <div class="block acc collapsed" id="pixelSection">
+      <h2 class="acc-h">Pixel-Dekor</h2>
+      <select id="pixTpl">
+        <option value="none">keins</option>
+        <option value="corners6">Ecken diagonal (6 Farben)</option>
+        <option value="team6">Team/Foto (6 Farben)</option>
+        <option value="sparse6">sparsam diagonal (6 Farben)</option>
+        <option value="accentPair">Akzent-Paar (eine Farbe)</option>
+      </select>
+      <div class="ctl" style="margin-top:8px;min-width:0">
+        <label>Pixelgröße (Ecke-an-Ecke) <b id="pxv">6.0%</b></label>
+        <input id="pixSize" type="range" min="20" max="140" value="60">
+      </div>
+      <div id="pixSelWrap" style="display:none;margin-top:8px">
+        <label class="mini">Ausgewählter Pixel</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="pixColor" type="color" style="width:38px;height:34px;padding:0;border:1px solid var(--line);border-radius:2px">
+          <button class="ghost" id="pixDelete" style="flex:1">entfernen</button>
+          <button class="ghost" id="pixDeselect">abwählen</button>
+        </div>
+      </div>
+      <div class="note" style="margin-top:4px">Vorgefertigt · Pixel <b>anklicken</b> = auswählen/umfärben, <b>ziehen</b> = verschieben. Vergrößern hält Paare Ecke an Ecke.</div>
+    </div>
+
+    <!-- LOGO — global -->
+    <div class="block acc collapsed" id="logoSection">
+      <h2 class="acc-h">Logo</h2>
+      <label class="mini" style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)">
+        <input type="checkbox" id="logoOn" style="accent-color:var(--orange)"> einblenden</label>
+      <div id="logoOpts" style="margin-top:6px;opacity:.45">
+        <div style="display:flex;gap:8px">
+          <div style="flex:1"><label class="mini">Variante</label>
+            <select id="logoSource">
+              <option value="zc">zetcom (helle BG)</option>
+              <option value="zcDark">zetcom (dunkle BG)</option>
+              <option value="custom">Custom-Upload</option>
+            </select></div>
+          <div style="flex:1"><label class="mini">Ecke</label>
+            <select id="logoCorner"><option value="tr">oben rechts</option><option value="tl">oben links</option><option value="br">unten rechts</option><option value="bl">unten links</option></select></div>
+        </div>
+        <input id="logoUpload" type="file" accept="image/*,.svg" style="margin-top:6px;font-size:12px;display:none">
+        <div class="ctl" style="margin-top:8px;min-width:0">
+          <label>Logo-Größe <b id="lsv">14%</b></label>
+          <input id="logoScale" type="range" min="6" max="34" value="14">
+        </div>
+      </div>
+      <div class="note" style="margin-top:8px">Sitzt im gleichen Rand wie der Composer-Text. CD-perfekte Cards baut der <b>zetcom-graphics</b>-Skill.</div>
     </div>
 
     <div class="block acc">
@@ -383,7 +421,7 @@
         <button class="ghost" id="openProject" style="flex:1">Projekt laden</button>
       </div>
       <input id="projectFile" type="file" accept=".json,application/json" style="display:none">
-      <div class="note" id="projectNote">Sichert Quellbild, Zuschnitt, Panel, Composer-Text, Pixel-Dekor, Logo und alle Ebenen in eine <b>.zic.json</b>-Datei. Später laden und exakt weiterarbeiten. Die Projektdatei lässt sich auch direkt ins Fenster ziehen.</div>
+      <div class="note" id="projectNote">Sichert Quellbild, Zuschnitt, Panel, Composer-Text, Pixel-Dekor, Logo, Pinselstriche und alle Ebenen in eine <b>.zic.json</b>-Datei. Später laden und exakt weiterarbeiten. Die Projektdatei lässt sich auch direkt ins Fenster ziehen.</div>
     </div>
   </div>
 </div>
@@ -424,15 +462,22 @@ const GAP_DEFAULT='⚠ Das Bild deckt den Rahmen nicht komplett — an einer Eck
 const isLogo=()=>panel.fit==='logo';
 let panel=PANELS[0];
 let fmt='webp', quality=80, bg='transparent';
-// ---- Composer state ----
-let composerOn=false, bgMode='photo', product='museum', accentCustom='#ff5900', eyebrowCaps=true;
-let eyebrowTxt='', titleTxt='', sublineTxt='', metaTxt='', overlayOp=0.35, textAlign='left';
+// ---- Fläche & Akzent (global, unabhängig vom Composer) ----
+let bgMode='photo', product='museum', accentCustom='#ff5900';
+let overlayOp=0;                           // Abdunklung des Fotos — 0, damit reines Cropping unberührt bleibt
+// ---- Composer state (nur noch das feste Textlayout) ----
+let composerOn=false, eyebrowCaps=true;
+let eyebrowTxt='', titleTxt='', sublineTxt='', metaTxt='', textAlign='left';
 let ctaOn=false, ctaLabel='', ctaArrow='down';
-let textX=null, textY=null;               // freie Textblock-Position (Ziel-px, top-left); null = auto
+let textX=null, textY=null;               // freie Textblock-Position (Ziel-px): linke Kante / optische Oberkante; null = auto
 let titleScale=1, bodyScale=1;             // Textgrößen-Multiplikatoren
 let pixTpl='none', pixSize=0.06;           // Pixelgröße als Bruchteil der Breite
 let pixels=[], pixSel=-1;                  // einzelne Pixel {ax,ay,gx,gy,c}; ausgewählter Index
-let logoOn=true, logoCorner='tr', logoSource='zc', logoScale=0.14, blankMode=false, fontReady=false;
+let logoOn=false, logoCorner='tr', logoSource='zc', logoScale=0.14, blankMode=false, fontReady=false;
+// ---- Pinsel (global): Striche in Rahmen-Prozent, damit Vorschau und Export identisch sind ----
+let brushOn=false, brushColor='#ff5900', brushSizePct=0.02, brushOpacity=1, brushSoft=0, brushErase=false, brushUnder=false;
+let strokes=[], curStroke=null;            // {color,sizePct,opacity,soft,erase,pts:[[x,y],…]}
+let brushBase=null, brushBaseW=0, brushBaseH=0, brushBaseDirty=true, brushScratch=null;
 let emptyMode=false;                       // Grafik ohne Quellbild: leere Fläche in Panelgröße
 let viewZoom=null;                         // Ansicht der Arbeitsfläche: null = ins Fenster einpassen, sonst Faktor
 // zetcom CD (Brand Guidelines): Produkt-Akzente + Neutral-Rampe — Auswahl unter jedem Farbfeld
@@ -579,7 +624,7 @@ function fitCover(){
 function render(){
   ctx.clearRect(0,0,FW,FH);
   if(isLogo()){ if(img) renderLogo(); return; }
-  const solid = composerOn && bgMode!=='photo';
+  const solid = bgMode!=='photo';
   if(solid){ ctx.fillStyle=bgMode==='black'?'#000':bgMode==='gray'?'#f7f7f7':'#fff'; ctx.fillRect(0,0,FW,FH); }
   else if(img){
     ctx.save();
@@ -589,10 +634,14 @@ function render(){
   } else if(emptyMode){ // leere Fläche: Exporthintergrund zeigen, transparent bleibt das CSS-Schachbrett
     if(bg!=='transparent'){ ctx.fillStyle=bg; ctx.fillRect(0,0,FW,FH); }
   } else return;
-  if(composerOn) drawComposer(ctx, FW, true);
-  drawLayers(ctx, FW, true);
-  if(composerOn || !img){ frameBorder(ctx, FW, FH); document.getElementById('gapwarn').classList.remove('show'); }
-  else { drawOverlay(); checkGap(); }
+  drawScene(ctx, FW, true);
+  if(showGuides()){ drawOverlay(); checkGap(); }
+  else { frameBorder(ctx, FW, FH); document.getElementById('gapwarn').classList.remove('show'); }
+}
+// Drittel-Raster und Safe Zone helfen beim Zuschneiden, stören aber, sobald etwas draufgebaut wird.
+function showGuides(){
+  if(!img || bgMode!=='photo') return false;
+  return !(composerOn || layers.length || pixels.length || strokes.length || curStroke || (logoOn&&logoReady()));
 }
 function frameBorder(g,w,h){ g.save(); g.strokeStyle='#111'; g.lineWidth=2; g.strokeRect(1,1,w-2,h-2); g.restore(); }
 function drawOverlay(){
@@ -650,10 +699,14 @@ function hitText(e){ if(!composerOn || !textBounds) return false;
 }
 cv.addEventListener('pointerdown',e=>{
   if(isLogo()) return;
-  const canPan=img && !(composerOn && bgMode!=='photo');
+  const canPan=img && bgMode==='photo';
   const {px,py,TW,TH}=evtTarget(e);
-  // 1) Composer-Pixel
-  if(composerOn){ const pi=pixelHit(px,py,TW,TH);
+  // 0) Pinsel-Modus hat Vorrang: malen statt auswählen/verschieben
+  if(brushOn && (img||blankMode)){
+    dragMode='brush'; dragging=true; startStroke(px/TW, py/TH);
+    lx=e.offsetX; ly=e.offsetY; cv.setPointerCapture(e.pointerId); render(); return; }
+  // 1) Pixel-Dekor
+  { const pi=pixels.length? pixelHit(px,py,TW,TH) : -1;
     if(pi>=0){ dragMode='pixel'; dragging=true; pixSel=pi; pixMoved=false; updatePixUI();
       cv.classList.add('drag'); lx=e.offsetX; ly=e.offsetY; cv.setPointerCapture(e.pointerId); render(); return; } }
   // 2) Eigene Ebenen (liegen zuoberst) — auch ohne Composer
@@ -669,17 +722,21 @@ cv.addEventListener('pointerdown',e=>{
   // 3) Composer-Textblock
   if(composerOn && hitText(e)){ dragMode='text'; if(textX==null)textX=textBounds.x; if(textY==null)textY=textBounds.y; }
   else if(canPan){ dragMode='pan'; }
-  else { if(composerOn && pixSel>=0){ pixSel=-1; updatePixUI(); render(); } return; }
+  else { if(pixSel>=0){ pixSel=-1; updatePixUI(); render(); } return; }
   dragging=true; cv.classList.add('drag'); lx=e.offsetX; ly=e.offsetY; cv.setPointerCapture(e.pointerId);
 });
 cv.addEventListener('pointermove',e=>{ if(!dragging)return;
   const r=cv.width/cv.getBoundingClientRect().width, dx=(e.offsetX-lx)*r, dy=(e.offsetY-ly)*r, [TW,TH]=targetHW();
+  if(dragMode==='brush'){ const p=evtTarget(e); addStrokePoint(p.px/TW, p.py/TH); lx=e.offsetX; ly=e.offsetY; render(); return; }
   if(dragMode==='pixel' && pixSel>=0){ pixels[pixSel].ax+=dx/FW; pixels[pixSel].ay+=dy/FH; pixMoved=true; }
   else if(dragMode==='layer' && selSet.size){ for(const idx of selSet){ layers[idx].xPct+=dx/FW; layers[idx].yPct+=dy/FH; } }
-  else if(dragMode==='text'){ if(textAlign!=='center') textX+=dx*TW/FW; textY+=dy*TH/FH; }
+  else if(dragMode==='text'){ textX+=dx*TW/FW; textY+=dy*TH/FH; }
   else { tx+=dx; ty+=dy; }
   lx=e.offsetX; ly=e.offsetY; render();});
-cv.addEventListener('pointerup',e=>{dragging=false;dragMode='none';cv.classList.remove('drag');});
+cv.addEventListener('pointerup',e=>{
+  if(dragMode==='brush') endStroke();
+  dragging=false;dragMode='none';cv.classList.remove('drag');});
+cv.addEventListener('pointercancel',e=>{ if(dragMode==='brush') endStroke(); dragging=false;dragMode='none';cv.classList.remove('drag');});
 cv.addEventListener('wheel',e=>{
   if(e.ctrlKey){ e.preventDefault(); stepViewZoom(e.deltaY<0?1:-1); return; }   // Strg = Ansicht zoomen
   if(!img||isLogo())return;e.preventDefault();
@@ -821,11 +878,10 @@ document.getElementById('export').onclick=async()=>{
     const s=Math.min(TW/tb.w, TH/tb.h);
     const dw=tb.w*s, dh=tb.h*s, dx=(TW-dw)/2, dy=(TH-dh)/2;
     o.drawImage(img, tb.x,tb.y,tb.w,tb.h, dx,dy,dw,dh);
-  } else if(composerOn && bgMode!=='photo'){ // Statement auf Vollton
-    o.fillStyle=bgMode==='black'?'#000':bgMode==='gray'?'#f7f7f7':'#fff'; o.fillRect(0,0,TW,TH);
-    drawComposer(o,TW); drawLayers(o,TW);
   } else {
-    if(img){ // ohne Quellbild (leere Fläche) bleibt nur der Exporthintergrund von oben
+    if(bgMode!=='photo'){ // Statement auf Vollton
+      o.fillStyle=bgMode==='black'?'#000':bgMode==='gray'?'#f7f7f7':'#fff'; o.fillRect(0,0,TW,TH);
+    } else if(img){ // ohne Quellbild (leere Fläche) bleibt nur der Exporthintergrund von oben
       const k=TW/FW; // display→target scale (uniform, aspect preserved)
       o.save();
       o.translate(TW/2+tx*k, TH/2+ty*k);
@@ -834,8 +890,7 @@ document.getElementById('export').onclick=async()=>{
       o.drawImage(img, -iw/2, -ih/2, iw, ih);
       o.restore();
     }
-    if(composerOn) drawComposer(o,TW);
-    drawLayers(o,TW);
+    drawScene(o,TW,false);
   }
   const mime=fmt==='png'?'image/png':fmt==='jpeg'?'image/jpeg':'image/webp';
   const qual=fmt==='png'?undefined:quality/100;
@@ -855,13 +910,18 @@ function compTextColor(){ return (bgMode==='white'||bgMode==='gray') ? '#000' : 
 function compDark(){ return compTextColor()==='#fff'; }         // dunkler Hintergrund → helle Schrift
 function mutedColor(){ return compDark()? '#b5b5b5' : '#6b6b6b'; }
 
-function drawComposer(g, cw, interactive){
+// Alles, was über Foto/Vollton liegt — identisch für Vorschau und Export.
+// Reihenfolge: Abdunklung → (Pinsel) → Pixel → Composer-Text → Logo → Ebenen → (Pinsel oben).
+function drawScene(g, cw, interactive){
   const [TW,TH]=targetHW(); const f=cw/TW; const CH=g.canvas.height;
   const M=Math.round(TW*0.055/8)*8;
   if(bgMode==='photo' && overlayOp>0){ g.save(); g.fillStyle=`rgba(0,0,0,${overlayOp})`; g.fillRect(0,0,cw,CH); g.restore(); } // flach, kein Gradient
+  if(brushUnder) drawBrush(g,cw,CH);
   drawPixels(g,f,TW,TH,interactive);
-  drawCompText(g,f,TW,TH,M);
+  if(composerOn) drawCompText(g,f,TW,TH,M); else textBounds=null;
   if(logoOn && logoReady()) drawCompLogo(g,f,TW,TH,M);
+  drawLayers(g,cw,interactive);
+  if(!brushUnder) drawBrush(g,cw,CH);
 }
 
 // ---- Text: **Wort**=Bold/Akzent, \n=Umbruch, Wort-Umbruch; natürliche Leerzeichen (sp pro Wort) ----
@@ -881,19 +941,27 @@ function tokenizeText(raw){                      // Wörter mit sp = Leerzeichen
 }
 // effektive Schriftstärke je Tier — MUSS zwischen Messen und Zeichnen identisch sein, sonst Überlappung
 function effBold(word, kind){ return kind==='sub' ? true : kind==='meta' ? false : word.bold; }
-function wrapLines(g, raw, size, maxW, kind){    // → Zeilen aus {t,bold,w,pre}; pre = führende Leerzeichenbreite
+// Canvas hängt bei letterSpacing (wie CSS) auch HINTER dem letzten Zeichen noch ein Tracking an.
+// Beim Messen wieder abziehen, sonst wird gesperrter Text (Eyebrow) zu breit und sitzt zentriert zu weit links.
+function trackedW(g,txt,trackPx){ return Math.max(0, g.measureText(txt).width - (txt.length? trackPx : 0)); }
+// Messen und Zeichnen laufen beide in Canvas-Pixeln (size*f) und werden erst danach auf Logik-Pixel
+// zurückgerechnet — sonst driften Zeilenbreiten und Umbruch zwischen Vorschau und Export auseinander.
+function wrapLines(g, f, raw, size, maxW, kind){ // → Zeilen aus {t,bold,w,pre}; pre = führende Leerzeichenbreite
   const paras=tokenizeText(raw), sw={};
-  const spaceW=b=>{ if(sw[b]==null){ g.font=`${b?700:300} ${size}px "DM Sans"`; g.letterSpacing='0px'; sw[b]=g.measureText(' ').width; } return sw[b]; };
-  const wordW=(t,b)=>{ g.font=`${b?700:300} ${size}px "DM Sans"`; g.letterSpacing='0px'; return g.measureText(t).width; };
+  const setFont=b=>{ g.font=`${b?700:300} ${size*f}px "DM Sans"`; g.letterSpacing='0px'; };
+  const spaceW=b=>{ if(sw[b]==null){ setFont(b); sw[b]=g.measureText(' ').width/f; } return sw[b]; };
+  const wordW=(t,b)=>{ setFont(b); return g.measureText(t).width/f; };
   const lines=[];
   for(const para of paras){
-    let line=[], w=0;
+    let line=[], w=0, prevB=null;
     for(const word of para){
       const b=effBold(word,kind);                // in der Stärke messen, in der auch gezeichnet wird
-      const ww=wordW(word.t,b), pre=(line.length&&word.sp)? spaceW(b):0;
+      const ww=wordW(word.t,b);
+      const sb=prevB!=null?prevB:b;              // das Leerzeichen gehört zum Wort DAVOR (wie im Satz)
+      const pre=(line.length&&word.sp)? spaceW(sb):0;
       if(line.length && w+pre+ww>maxW){ lines.push(line); line=[]; w=0; }
-      const pin=(line.length&&word.sp)? spaceW(b):0;
-      line.push({t:word.t, bold:word.bold, w:ww, pre:pin}); w+=pin+ww;
+      const pin=(line.length&&word.sp)? spaceW(sb):0;
+      line.push({t:word.t, bold:word.bold, w:ww, pre:pin}); w+=pin+ww; prevB=b;
     }
     lines.push(line);
   }
@@ -902,48 +970,91 @@ function wrapLines(g, raw, size, maxW, kind){    // → Zeilen aus {t,bold,w,pre
 const lineW = ln => ln.reduce((a,wd)=>a+wd.pre+wd.w,0);
 const groupW = lines => lines.reduce((mx,ln)=>Math.max(mx,lineW(ln)),0);
 
-// Optische Mitte einer Textzeile (Versalband) für die aktuell gesetzte Schrift.
-// yTop = Zeilenoberkante bei textBaseline='top', f = Canvas-Faktor. Rückgabe in Logik-Pixeln.
-// Damit sitzt der Eyebrow-Pixel mittig zum Text und nicht mittig zur em-Box (die oben Luft
-// und unten Platz für Unterlängen hat und den Pixel dadurch zu hoch schiebt).
-function capMidY(g,f,yTop,fontSize){
-  const m=g.measureText('H');
-  if(!m || m.actualBoundingBoxAscent==null || m.actualBoundingBoxDescent==null) return yTop+fontSize/2;
-  return yTop + (m.actualBoundingBoxDescent - m.actualBoundingBoxAscent)/(2*f);
+// Optische Metriken der GERADE GESETZTEN Schrift bei textBaseline='top', in Logik-Pixeln:
+//   capGap = Luft über der Versalhöhe, base = Oberkante → Grundlinie.
+// Damit lässt sich Text an der sichtbaren Kante ausrichten statt an der em-Box (die oben Luft
+// und unten Platz für Unterlängen hat und den Block sonst schief im Rand sitzen lässt).
+function fontMetrics(g,f,size){
+  const m=g.measureText('H'), fb={capGap:size*0.21, base:size*0.79};
+  if(!m || m.actualBoundingBoxAscent==null || m.actualBoundingBoxDescent==null) return fb;
+  const a=m.actualBoundingBoxAscent, d=m.actualBoundingBoxDescent;
+  if(!(d>0) || a>0) return fb;                   // Metriken nicht auf den Textursprung bezogen → Näherung
+  return {capGap:-a/f, base:d/f};
 }
+function metricsFor(g,f,size,weight){ g.font=`${weight} ${size*f}px "DM Sans"`; g.letterSpacing='0px'; return fontMetrics(g,f,size); }
+// Optische Mitte des Versalbands (für den Eyebrow-Pixel), yTop = Zeilenoberkante.
+function capMidY(g,f,yTop,fontSize){ const m=fontMetrics(g,f,fontSize); return yTop + (m.capGap+m.base)/2; }
 
+// Festes Textlayout: Eyebrow · Titel · Subline · Zusatzzeile · CTA als ein Block.
+// Erst werden alle Zeilen gemessen (Reihen mit Vorabstand, Zeilenhöhe und Schriftmetrik),
+// daraus die optische Ink-Box bestimmt, und erst dann gezeichnet. textX/textY beschreiben die
+// linke Kante bzw. die optische Oberkante des Blocks.
 function drawCompText(g,f,TW,TH,M){
-  const col=compTextColor(), acc=accentHex(), mut=mutedColor(), centered=textAlign==='center';
+  const col=compTextColor(), acc=accentHex(), mut=mutedColor();
   const eySize=Math.round(Math.max(13,TW*0.017)*bodyScale), tSize=Math.round(Math.min(TW*0.075,TH*0.24)*titleScale);
   const sSize=Math.round(TW*0.033*bodyScale), mSize=Math.round(TW*0.021*bodyScale), cSize=Math.round(TW*0.021*bodyScale);
-  const hasEy=eyebrowTxt.trim()!=='', hasT=titleTxt.trim()!=='', hasS=sublineTxt.trim()!=='', hasM=metaTxt.trim()!=='', hasC=ctaOn&&ctaLabel.trim()!=='';
-  const maxW=TW-2*M;
-  const tLines=hasT?wrapLines(g,titleTxt.trim(),tSize,maxW,'title'):[];
-  const sLines=hasS?wrapLines(g,sublineTxt.trim(),sSize,maxW,'sub'):[];
-  const mLines=hasM?wrapLines(g,metaTxt.trim(),mSize,maxW,'meta'):[];
-  const gEyT=Math.round(tSize*0.32), tLH=Math.round(tSize*1.08), gTS=Math.round(sSize*1.0), sLH=Math.round(sSize*1.28),
-        gSM=Math.round(mSize*0.8), mLH=Math.round(mSize*1.4), gMC=Math.round(cSize*1.3);
-  const cPadX=Math.round(cSize*1.2), cPadY=Math.round(cSize*0.85), cBorder=Math.max(2,Math.round(TW*0.0018));
-  const cArrowStr = ctaArrow==='down'?'  ↓':ctaArrow==='ne'?'  ↗':'';
-  let cW=0,cH=0;
-  if(hasC){ g.font=`700 ${cSize}px "DM Sans"`; g.letterSpacing='0px'; cW=g.measureText(ctaLabel.trim()+cArrowStr).width+cPadX*2; cH=cSize+cPadY*2; }
-  let blockH=0;
-  if(hasEy) blockH+=eySize+gEyT;
-  blockH+=tLines.length*tLH;
-  if(hasS) blockH+=gTS+sLines.length*sLH;
-  if(hasM) blockH+=gSM+mLines.length*mLH;
-  if(hasC) blockH+=gMC+cH;
-  let eyW=0;
   const eyStr = eyebrowCaps ? eyebrowTxt.trim().toUpperCase() : eyebrowTxt.trim();
-  if(hasEy){ g.font=`400 ${eySize}px "DM Sans"`; g.letterSpacing=(0.08*eySize)+'px'; const sq=Math.max(8,Math.round(eySize*0.85)); eyW=sq+eySize*0.5+g.measureText(eyStr).width; g.letterSpacing='0px'; }
-  const blockW=Math.max(eyW, groupW(tLines), groupW(sLines), groupW(mLines), cW, 1);
-  const bx0 = textX!=null? textX : M;
-  const by  = textY!=null? textY : (TH-M-blockH);
-  const leftX = centered? Math.round((TW-blockW)/2) : bx0;
-  textBounds={x:leftX, y:by, w:blockW, h:blockH};
-  g.save(); g.textBaseline='top'; let y=by;
-  const drawRunLine=(ln,size,kind)=>{
-    let x = centered? (TW-lineW(ln))/2 : bx0;
+  const hasEy=eyStr!=='', hasT=titleTxt.trim()!=='', hasS=sublineTxt.trim()!=='',
+        hasM=metaTxt.trim()!=='', hasC=ctaOn&&ctaLabel.trim()!=='';
+  if(!(hasEy||hasT||hasS||hasM||hasC)){ textBounds=null; return; }
+  const maxW=TW-2*M;
+  g.save(); g.textBaseline='top'; g.letterSpacing='0px';
+
+  // ---- 1. messen ----
+  const rows=[];
+  if(hasEy){
+    const track=0.08*eySize*f;
+    g.font=`400 ${eySize*f}px "DM Sans"`; g.letterSpacing=track+'px';
+    const tw=trackedW(g,eyStr,track)/f;
+    g.letterSpacing='0px';
+    const met=fontMetrics(g,f,eySize), sq=Math.max(8,Math.round(eySize*0.85)), gapSq=eySize*0.5;
+    rows.push({kind:'eyebrow', size:eySize, met, w:sq+gapSq+tw, lh:eySize, n:1, gap:0, sq, gapSq, txt:eyStr, track});
+  }
+  if(hasT){
+    const met=metricsFor(g,f,tSize,300), lines=wrapLines(g,f,titleTxt.trim(),tSize,maxW,'title');
+    rows.push({kind:'title', size:tSize, met, lines, w:groupW(lines),
+               lh:Math.round(tSize*1.08), n:lines.length, gap:rows.length?Math.round(tSize*0.32):0});
+  }
+  if(hasS){
+    const met=metricsFor(g,f,sSize,700), lines=wrapLines(g,f,sublineTxt.trim(),sSize,maxW,'sub');
+    rows.push({kind:'sub', size:sSize, met, lines, w:groupW(lines),
+               lh:Math.round(sSize*1.28), n:lines.length, gap:rows.length?Math.round(sSize*1.0):0});
+  }
+  if(hasM){
+    const met=metricsFor(g,f,mSize,300), lines=wrapLines(g,f,metaTxt.trim(),mSize,maxW,'meta');
+    rows.push({kind:'meta', size:mSize, met, lines, w:groupW(lines),
+               lh:Math.round(mSize*1.4), n:lines.length, gap:rows.length?Math.round(mSize*0.8):0});
+  }
+  if(hasC){
+    const met=metricsFor(g,f,cSize,700), label=ctaLabel.trim();
+    const arrow = ctaArrow==='down'?'↓':ctaArrow==='ne'?'↗':'';
+    const labelW=g.measureText(label).width/f;
+    const arrowGap=arrow? cSize*0.55:0, arrowW=arrow? g.measureText(arrow).width/f:0;
+    const padX=Math.round(cSize*1.2), padY=Math.round(cSize*0.85);
+    const border=Math.max(2,Math.round(TW*0.0018)), capH=met.base-met.capGap;
+    const boxH=Math.round(capH+padY*2);
+    rows.push({kind:'cta', size:cSize, met, label, arrow, labelW, arrowGap, padX, border, boxH,
+               w:Math.round(labelW+arrowGap+arrowW+padX*2), lh:boxH, n:1, gap:rows.length?Math.round(cSize*1.3):0});
+  }
+
+  // ---- 2. Geometrie: Reihen verketten, optische Ink-Box bestimmen ----
+  let h=0;
+  for(const r of rows){ r.y=h+r.gap; h=r.y+(r.kind==='cta'? r.boxH : r.n*r.lh); }
+  const first=rows[0], last=rows[rows.length-1];
+  const inkTop = first.kind==='cta' ? first.y : first.y+first.met.capGap;
+  const inkBot = last.kind==='cta' ? last.y+last.boxH : last.y+(last.n-1)*last.lh+last.met.base;
+  const blockW = Math.max(1, ...rows.map(r=>r.w));
+  // waagerecht: textX = linke Blockkante (in jeder Ausrichtung ziehbar); senkrecht: textY = optische Oberkante
+  const bx = textX!=null ? textX
+           : textAlign==='center' ? Math.round((TW-blockW)/2)
+           : textAlign==='right'  ? TW-M-blockW : M;
+  const topY = textY!=null ? textY-inkTop : TH-M-inkBot;
+  textBounds={x:bx, y:topY+inkTop, w:blockW, h:Math.max(1,inkBot-inkTop)};
+  const lineX = w => bx + (textAlign==='center' ? (blockW-w)/2 : textAlign==='right' ? blockW-w : 0);
+
+  // ---- 3. zeichnen ----
+  const drawRunLine=(ln,size,kind,y)=>{
+    let x=lineX(lineW(ln));
     for(const wd of ln){
       x+=wd.pre;                                  // natürliches Leerzeichen davor
       const bold = effBold(wd, kind);
@@ -952,24 +1063,26 @@ function drawCompText(g,f,TW,TH,M){
       g.fillStyle=color; g.fillText(wd.t, x*f, y*f); x+=wd.w;
     }
   };
-  if(hasEy){
-    const sq=Math.max(8,Math.round(eySize*0.85)), eyText=eyStr;
-    g.font=`400 ${eySize*f}px "DM Sans"`; g.letterSpacing=(0.08*eySize*f)+'px';
-    const tw=g.measureText(eyText).width/f, gapSq=eySize*0.5, totalW=sq+gapSq+tw;
-    let ex = centered? (TW-totalW)/2 : bx0;
-    const sqY = capMidY(g,f,y,eySize) - sq/2;
-    g.fillStyle=acc; g.fillRect(ex*f,sqY*f,sq*f,sq*f);
-    g.fillText(eyText,(ex+sq+gapSq)*f,y*f); g.letterSpacing='0px'; y+=eySize+gEyT;
-  }
-  for(const ln of tLines){ drawRunLine(ln,tSize,'title'); y+=tLH; }
-  if(hasS){ y+=gTS; for(const ln of sLines){ drawRunLine(ln,sSize,'sub'); y+=sLH; } }
-  if(hasM){ y+=gSM; for(const ln of mLines){ drawRunLine(ln,mSize,'meta'); y+=mLH; } }
-  if(hasC){ y+=gMC;
-    const cx = centered? (TW-cW)/2 : bx0;
-    g.strokeStyle=col; g.lineWidth=cBorder*f;
-    g.strokeRect(cx*f+cBorder*f/2, y*f+cBorder*f/2, (cW-cBorder)*f, (cH-cBorder)*f);
-    g.font=`700 ${cSize*f}px "DM Sans"`; g.letterSpacing='0px'; g.fillStyle=col;
-    g.fillText(ctaLabel.trim()+cArrowStr, (cx+cPadX)*f, (y+cPadY)*f);
+  for(const r of rows){
+    const y=topY+r.y;
+    if(r.kind==='eyebrow'){
+      const x=lineX(r.w);
+      g.font=`400 ${r.size*f}px "DM Sans"`; g.letterSpacing=r.track+'px';
+      const sqY=y+(r.met.capGap+r.met.base)/2-r.sq/2;   // Pixel mittig zum Versalband
+      g.fillStyle=acc; g.fillRect(x*f, sqY*f, r.sq*f, r.sq*f);
+      g.fillText(r.txt, (x+r.sq+r.gapSq)*f, y*f);
+      g.letterSpacing='0px';
+    } else if(r.kind==='cta'){
+      const x=lineX(r.w);
+      g.strokeStyle=col; g.lineWidth=r.border*f;
+      g.strokeRect(x*f+r.border*f/2, y*f+r.border*f/2, (r.w-r.border)*f, (r.boxH-r.border)*f);
+      g.font=`700 ${r.size*f}px "DM Sans"`; g.letterSpacing='0px'; g.fillStyle=col;
+      const ty=y+(r.boxH-(r.met.base-r.met.capGap))/2-r.met.capGap;   // Versalband in der Box zentrieren
+      g.fillText(r.label, (x+r.padX)*f, ty*f);
+      if(r.arrow) g.fillText(r.arrow, (x+r.padX+r.labelW+r.arrowGap)*f, ty*f);
+    } else {
+      let yy=y; for(const ln of r.lines){ drawRunLine(ln,r.size,r.kind,yy); yy+=r.lh; }
+    }
   }
   g.letterSpacing='0px'; g.restore();
 }
@@ -1007,6 +1120,82 @@ function drawPixels(g,f,TW,TH,interactive){
 function pixelHit(px,py,TW,TH){ const side=Math.max(8,Math.round(TW*pixSize));
   for(let i=pixels.length-1;i>=0;i--){ const r=pixelRect(pixels[i],TW,TH,side); if(px>=r.x&&px<=r.x+side&&py>=r.y&&py<=r.y+side) return i; } return -1; }
 
+// ================= PINSEL =================
+// Striche liegen in Rahmen-Prozent (x/Breite, y/Höhe) und werden beim Export in Zielauflösung
+// neu gezeichnet — also immer scharf, unabhängig von der Vorschaugröße. Der Radierer darf nur
+// eigene Striche wegnehmen, deshalb liegt der ganze Pinsel auf einer eigenen Offscreen-Ebene,
+// die anschließend als Ganzes aufs Bild kommt.
+function paintStroke(b,s,W,H){
+  const p=s.pts; if(!p||!p.length) return;
+  const lw=Math.max(1,(s.sizePct||0.02)*W);
+  b.save();
+  b.globalCompositeOperation = s.erase? 'destination-out':'source-over';
+  b.globalAlpha = s.erase? 1 : (s.opacity!=null? s.opacity:1);
+  b.strokeStyle=s.color||'#ff5900'; b.fillStyle=b.strokeStyle;
+  b.lineWidth=lw; b.lineCap='round'; b.lineJoin='round';
+  if(s.soft>0){ try{ b.filter=`blur(${(lw*s.soft*0.3).toFixed(2)}px)`; }catch(_){} }
+  if(p.length===1){ b.beginPath(); b.arc(p[0][0]*W, p[0][1]*H, lw/2, 0, Math.PI*2); b.fill(); }
+  else{
+    b.beginPath(); b.moveTo(p[0][0]*W, p[0][1]*H);
+    for(let i=1;i<p.length-1;i++){                      // Punkte glätten: Kurve durch die Mittelpunkte
+      const x1=p[i][0]*W, y1=p[i][1]*H, x2=p[i+1][0]*W, y2=p[i+1][1]*H;
+      b.quadraticCurveTo(x1,y1,(x1+x2)/2,(y1+y2)/2);
+    }
+    const l=p[p.length-1]; b.lineTo(l[0]*W,l[1]*H);
+    b.stroke();                                         // ein Pfad, ein Stroke → gleichmäßige Deckkraft
+  }
+  b.restore();
+}
+function buildBrush(list,W,H){
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const b=c.getContext('2d');
+  for(const s of list) paintStroke(b,s,W,H);
+  return c;
+}
+// Fertige Striche werden gecacht; nur der laufende Strich kommt pro Frame frisch obendrauf.
+function brushLayer(W,H){
+  if(!brushBase || brushBaseW!==W || brushBaseH!==H || brushBaseDirty){
+    brushBase=buildBrush(strokes,W,H); brushBaseW=W; brushBaseH=H; brushBaseDirty=false;
+  }
+  if(!curStroke || !curStroke.pts.length) return brushBase;
+  if(!brushScratch) brushScratch=document.createElement('canvas');
+  if(brushScratch.width!==W || brushScratch.height!==H){ brushScratch.width=W; brushScratch.height=H; }
+  const s=brushScratch.getContext('2d');
+  s.clearRect(0,0,W,H); s.drawImage(brushBase,0,0); paintStroke(s,curStroke,W,H);
+  return brushScratch;
+}
+function hasStrokes(){ return strokes.length>0 || !!(curStroke && curStroke.pts.length); }
+function drawBrush(g,cw,ch){
+  if(!hasStrokes()) return;
+  const W=Math.max(1,Math.round(cw)), H=Math.max(1,Math.round(ch));
+  const src = (W===Math.round(FW) && H===Math.round(FH))
+    ? brushLayer(W,H)                                   // Vorschau: Cache
+    : buildBrush(curStroke&&curStroke.pts.length? strokes.concat([curStroke]) : strokes, W, H); // Export
+  g.drawImage(src,0,0,W,H);
+}
+function startStroke(x,y){
+  curStroke={color:brushColor, sizePct:brushSizePct, opacity:brushOpacity, soft:brushSoft,
+             erase:brushErase, pts:[[x,y]]};
+}
+function addStrokePoint(x,y){
+  if(!curStroke) return;
+  const p=curStroke.pts, l=p[p.length-1];
+  if(Math.abs(x-l[0])*FW < 0.7 && Math.abs(y-l[1])*FH < 0.7) return;   // Punkte ausdünnen
+  p.push([x,y]);
+}
+function endStroke(){
+  if(curStroke && curStroke.pts.length){ strokes.push(curStroke); brushBaseDirty=true; }
+  curStroke=null; syncBrushNote(); render();
+}
+function undoStroke(){ if(!strokes.length) return; strokes.pop(); brushBaseDirty=true; syncBrushNote(); render(); }
+function clearStrokes(){ if(!strokes.length) return; strokes=[]; curStroke=null; brushBaseDirty=true; syncBrushNote(); render(); }
+function syncBrushNote(){
+  const n=strokes.length;
+  $('brushNote').innerHTML = n
+    ? `<b>${n}</b> ${n===1?'Strich':'Striche'} · sitzen relativ zum Rahmen und werden beim Export in voller Auflösung neu gezeichnet. <kbd>Strg</kbd>+<kbd>Z</kbd> nimmt den letzten zurück.`
+    : 'Noch keine Striche. Pinsel-Modus anhaken, dann im Bild ziehen. Striche sitzen relativ zum Rahmen und werden beim Export in voller Auflösung neu gezeichnet.';
+}
+
 // ---- Logo: 2 Standardvarianten (farbig / mono-auto) + Custom-Upload, größenvariabel ----
 function logoKey(){
   if(logoSource==='custom') return LOGO_IMG.custom ? 'custom' : null;
@@ -1027,7 +1216,7 @@ const prodSel=document.getElementById('product');
 Object.keys(ACCENTS).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=ACCENT_LABEL[k];prodSel.appendChild(o);});
 prodSel.appendChild(Object.assign(document.createElement('option'),{value:'custom',textContent:'Custom-Farbe …'}));
 function updateBlank(){
-  blankMode = emptyMode || (composerOn && bgMode!=='photo');
+  blankMode = emptyMode || bgMode!=='photo';
   showDrop(!(img||blankMode));
   document.getElementById('export').disabled = !(img||blankMode);
 }
@@ -1060,7 +1249,7 @@ $('pixColor').oninput=e=>{ if(pixSel>=0){ pixels[pixSel].c=e.target.value; rende
 $('pixDelete').onclick=()=>{ if(pixSel>=0){ pixels.splice(pixSel,1); pixSel=-1; updatePixUI(); render(); } };
 $('pixDeselect').onclick=()=>{ pixSel=-1; updatePixUI(); render(); };
 function updatePixUI(){ const wrap=$('pixSelWrap'); if(pixSel>=0){ wrap.style.display='block'; $('pixColor').value=pixels[pixSel].c; } else wrap.style.display='none'; syncPalettes(); }
-$('logoOn').onchange=e=>{ logoOn=e.target.checked; $('logoOpts').style.opacity=logoOn?1:.4; render(); };
+$('logoOn').onchange=e=>{ logoOn=e.target.checked; $('logoOpts').style.opacity=logoOn?1:.45; render(); };
 $('logoSource').onchange=e=>{ logoSource=e.target.value; $('logoUpload').style.display = logoSource==='custom'?'block':'none'; render(); };
 $('logoCorner').onchange=e=>{ logoCorner=e.target.value; render(); };
 $('logoScale').oninput=e=>{ logoScale=+e.target.value/100; $('lsv').textContent=e.target.value+'%'; render(); };
@@ -1069,8 +1258,24 @@ $('logoUpload').onchange=async e=>{ const file=e.target.files[0]; if(!file)retur
     logoSource='custom'; $('logoSource').value='custom'; render(); }
   catch(err){ alert('Logo konnte nicht geladen werden: '+err.message); } };
 
+// ---- Pinsel-Steuerung ----
+function syncBrushCursor(){ cv.style.cursor = brushOn ? 'crosshair' : ''; }
+$('brushOn').onchange=e=>{ brushOn=e.target.checked; $('brushOpts').style.opacity=brushOn?1:.45; syncBrushCursor(); };
+$('brushColor').oninput=e=>{ brushColor=e.target.value; };
+$('brushSize').oninput=e=>{ brushSizePct=+e.target.value/1000; $('brSizeV').textContent=(brushSizePct*100).toFixed(1)+'%'; };
+$('brushOpacity').oninput=e=>{ brushOpacity=+e.target.value/100; $('brOpacV').textContent=e.target.value+'%'; };
+$('brushSoft').oninput=e=>{ brushSoft=+e.target.value/100; $('brSoftV').textContent=e.target.value+'%'; };
+$('brushErase').onchange=e=>{ brushErase=e.target.checked; };
+$('brushUnder').onchange=e=>{ brushUnder=e.target.checked; render(); };
+$('brushUndo').onclick=()=>undoStroke();
+$('brushClear').onclick=()=>clearStrokes();
+document.addEventListener('keydown',e=>{
+  if(/^(INPUT|TEXTAREA|SELECT)$/.test((e.target&&e.target.tagName)||'')) return;
+  if((e.ctrlKey||e.metaKey) && (e.key==='z'||e.key==='Z') && strokes.length){ e.preventDefault(); undoStroke(); }
+});
+
 // ================= EIGENE EBENEN (Text- & Bild-Ebenen, frei ziehbar) =================
-// Positionen als Bruchteil des Zielmaßes (auflösungsunabhängig) → wie drawComposer × f gezeichnet.
+// Positionen als Bruchteil des Zielmaßes (auflösungsunabhängig) → wie drawScene × f gezeichnet.
 let layers=[], layerSel=-1, selSet=new Set();   // layerSel = primär (Editor); selSet = alle ausgewählten Indizes
 const LAYER_FONTS=[
   {v:'"DM Sans"', l:'DM Sans (Marke)'},
@@ -1105,28 +1310,43 @@ function drawLayers(g, cw, interactive){
 function drawTextLayer(g,f,TW,TH,L,selected){
   const size=Math.max(6, L.sizePct*TW), eye=!!L.eyebrow;
   g.save(); g.textBaseline='top';
-  g.letterSpacing = eye? (0.08*size*f)+'px' : '0px';
+  const track = eye? 0.08*size*f : 0;
+  g.letterSpacing = track+'px';
   g.font=`${L.italic?'italic ':''}${L.weight} ${size*f}px ${L.font}`;
   let src=L.text||'';
   if(eye && L.eyeCaps!==false) src=src.toUpperCase();
   const lines=src.split('\n'), lh=size*1.22;
+  const met=fontMetrics(g,f,size);
   // Eyebrow: Akzent-Pixel vor der ersten Zeile, alle Zeilen um Pixel + Abstand eingerückt
   const sq = eye? Math.max(6, Math.round(size*0.85)) : 0, gapSq = eye? size*0.5 : 0, ind = eye? sq+gapSq : 0;
-  let maxw=1; const ws=lines.map(ln=>{ const w=g.measureText(ln).width/f; if(w>maxw)maxw=w; return w; });
-  const blockH=Math.max(lines.length,1)*lh, x0=L.xPct*TW, y0=L.yPct*TH;
-  if(eye){
-    const sqY = capMidY(g,f,y0,size) - sq/2;
-    g.fillStyle = L.pixColor || accentHex();
-    g.fillRect(x0*f, sqY*f, sq*f, sq*f);
-  }
+  // Tracking hinter dem letzten Zeichen abziehen, sonst wird der Block zu breit und zentriert schief
+  let maxw=1; const ws=lines.map(ln=>{ const w=Math.max(0,g.measureText(ln).width-(ln.length?track:0))/f; if(w>maxw)maxw=w; return w; });
+  const x0=L.xPct*TW, y0=L.yPct*TH;
+  const sqY = eye? capMidY(g,f,y0,size)-sq/2 : 0;
+  if(eye){ g.fillStyle = L.pixColor || accentHex(); g.fillRect(x0*f, sqY*f, sq*f, sq*f); }
   g.fillStyle=L.color;
   lines.forEach((ln,li)=>{ let x=x0+ind;
     if(L.align==='center') x+= (maxw-ws[li])/2; else if(L.align==='right') x+= (maxw-ws[li]);
     g.fillText(ln, x*f, (y0+li*lh)*f); });
   maxw+=ind;
-  L._b={x:x0,y:y0,w:maxw,h:blockH};
+  const nl=Math.max(lines.length,1);
+  // _b = typografische Box: oben Versalhöhe, unten Grundlinie der letzten Zeile. Damit sitzen
+  //      mehrere Textebenen beim Ausrichten auf einer gemeinsamen Grundlinie (statt auf em-Boxen).
+  // _bi = echte Tintenkante inkl. Ober-/Unterlängen. Die gilt beim Ausrichten am Rahmen, sonst
+  //      würde ein „g" über die Kante hinausragen und abgeschnitten.
+  // _o / _oi = Versatz von der Ebenen-Position zur jeweiligen Box.
+  const mF=g.measureText(lines[0]||'H'), mL=g.measureText(lines[nl-1]||'H');
+  const ascInk = (mF.actualBoundingBoxAscent!=null && mF.actualBoundingBoxAscent<=0) ? -mF.actualBoundingBoxAscent/f : met.capGap;
+  const descInk= (mL.actualBoundingBoxDescent>0) ? mL.actualBoundingBoxDescent/f : met.base;
+  const inkTop = eye? Math.min(y0+met.capGap, sqY) : y0+met.capGap;
+  const inkBot = y0+(nl-1)*lh+met.base;
+  const fullTop = eye? Math.min(y0+ascInk, sqY) : y0+ascInk;
+  const fullBot = y0+(nl-1)*lh+Math.max(descInk, met.base);
+  const blockH = Math.max(1, inkBot-inkTop);
+  L._b={x:x0,y:inkTop,w:maxw,h:blockH}; L._o={dx:0,dy:inkTop-y0};
+  L._bi={x:x0,y:fullTop,w:maxw,h:Math.max(1,fullBot-fullTop)}; L._oi={dx:0,dy:fullTop-y0};
   if(selected){ g.strokeStyle='#111'; g.lineWidth=1.5; g.setLineDash([5,4]);
-    g.strokeRect(x0*f-4,y0*f-4,maxw*f+8,blockH*f+8); g.setLineDash([]); }
+    g.strokeRect(x0*f-4,inkTop*f-4,maxw*f+8,blockH*f+8); g.setLineDash([]); }
   g.restore();
 }
 function drawImageLayer(g,f,TW,TH,L,selected){
@@ -1137,7 +1357,7 @@ function drawImageLayer(g,f,TW,TH,L,selected){
   if(L.rot){ const cx=(x0+w/2)*f, cy=(y0+h/2)*f; g.translate(cx,cy); g.rotate(L.rot*Math.PI/180); g.translate(-cx,-cy); }
   g.drawImage(L.img, x0*f, y0*f, w*f, h*f);
   g.restore();
-  L._b={x:x0,y:y0,w:w,h:h};
+  L._b={x:x0,y:y0,w:w,h:h}; L._o={dx:0,dy:0}; L._bi=L._b; L._oi=L._o;
   if(selected){ g.save(); g.strokeStyle='#111'; g.lineWidth=1.5; g.setLineDash([5,4]);
     g.strokeRect(x0*f-3,y0*f-3,w*f+6,h*f+6); g.setLineDash([]); g.restore(); }
 }
@@ -1246,19 +1466,25 @@ function selectedIdx(){ return [...selSet].filter(i=>layers[i]); }
 function alignLayers(mode){
   const ids=selectedIdx(); if(!ids.length) return;
   const [TW,TH]=targetHW(); render();                     // frische _b-Bounds sicherstellen
-  const B=ids.map(i=>({i,b:layers[i]._b})).filter(o=>o.b); if(!B.length) return;
+  // Am Rahmen (eine Ebene) zählt die echte Tintenkante, damit nichts abgeschnitten wird;
+  // zueinander (mehrere Ebenen) die typografische Box, damit Grundlinien zusammenfallen.
+  const frame = ids.length===1;
+  const box=i=>(frame? (layers[i]._bi||layers[i]._b) : layers[i]._b);
+  const ofs=i=>((frame? layers[i]._oi : layers[i]._o)||{dx:0,dy:0});
+  const B=ids.map(i=>({i,b:box(i)})).filter(o=>o.b); if(!B.length) return;
   let minX,maxX,cX,minY,maxY,cY;
   if(B.length===1){ minX=0; maxX=TW; cX=TW/2; minY=0; maxY=TH; cY=TH/2; }
   else { minX=Math.min(...B.map(o=>o.b.x)); maxX=Math.max(...B.map(o=>o.b.x+o.b.w));
          minY=Math.min(...B.map(o=>o.b.y)); maxY=Math.max(...B.map(o=>o.b.y+o.b.h));
          cX=(minX+maxX)/2; cY=(minY+maxY)/2; }
-  B.forEach(o=>{ const L=layers[o.i], b=o.b;
-    if(mode==='left')    L.xPct=minX/TW;
-    else if(mode==='hcenter') L.xPct=(cX-b.w/2)/TW;
-    else if(mode==='right')   L.xPct=(maxX-b.w)/TW;
-    else if(mode==='top')     L.yPct=minY/TH;
-    else if(mode==='vmiddle') L.yPct=(cY-b.h/2)/TH;
-    else if(mode==='bottom')  L.yPct=(maxY-b.h)/TH;
+  B.forEach(o=>{ const L=layers[o.i], b=o.b, off=ofs(o.i);
+    // Zielwert gilt für die optische Box → Versatz herausrechnen, sonst wandert die Ebene daneben
+    if(mode==='left')    L.xPct=(minX-off.dx)/TW;
+    else if(mode==='hcenter') L.xPct=(cX-b.w/2-off.dx)/TW;
+    else if(mode==='right')   L.xPct=(maxX-b.w-off.dx)/TW;
+    else if(mode==='top')     L.yPct=(minY-off.dy)/TH;
+    else if(mode==='vmiddle') L.yPct=(cY-b.h/2-off.dy)/TH;
+    else if(mode==='bottom')  L.yPct=(maxY-b.h-off.dy)/TH;
   });
   render(); renderLayerList();
 }
@@ -1268,10 +1494,10 @@ function distributeLayers(axis){
   const B=ids.map(i=>({i,b:layers[i]._b})).filter(o=>o.b); if(B.length<3) return;
   if(axis==='h'){ B.sort((a,c)=>(a.b.x+a.b.w/2)-(c.b.x+c.b.w/2));
     const f=B[0].b.x+B[0].b.w/2, l=B[B.length-1].b.x+B[B.length-1].b.w/2, step=(l-f)/(B.length-1);
-    B.forEach((o,k)=>{ layers[o.i].xPct=((f+step*k)-o.b.w/2)/TW; });
+    B.forEach((o,k)=>{ const off=layers[o.i]._o||{dx:0}; layers[o.i].xPct=((f+step*k)-o.b.w/2-off.dx)/TW; });
   } else { B.sort((a,c)=>(a.b.y+a.b.h/2)-(c.b.y+c.b.h/2));
     const f=B[0].b.y+B[0].b.h/2, l=B[B.length-1].b.y+B[B.length-1].b.h/2, step=(l-f)/(B.length-1);
-    B.forEach((o,k)=>{ layers[o.i].yPct=((f+step*k)-o.b.h/2)/TH; });
+    B.forEach((o,k)=>{ const off=layers[o.i]._o||{dy:0}; layers[o.i].yPct=((f+step*k)-o.b.h/2-off.dy)/TH; });
   }
   render(); renderLayerList();
 }
@@ -1284,7 +1510,8 @@ updateSelUI(); renderLayerList();
 // ================= PROJEKT SPEICHERN / LADEN =================
 // Kompletter Zwischenstand als .zic.json: Quellbild, Ebenenbilder und Custom-Logo stecken als
 // Data-URL mit drin, damit die Datei allein genügt (kein Nachladen von Originalen nötig).
-const PROJECT_APP='zetcom-image-cropper', PROJECT_VERSION=1;
+// v2: Abdunklung, Pixel-Dekor und Logo hängen nicht mehr am Composer, dazu die Pinselstriche.
+const PROJECT_APP='zetcom-image-cropper', PROJECT_VERSION=2;
 
 function projectState(){
   return {
@@ -1300,6 +1527,9 @@ function projectState(){
     pixels:{ tpl:pixTpl, size:pixSize,
              items:pixels.map(p=>({ax:p.ax, ay:p.ay, gx:p.gx, gy:p.gy, c:p.c})) },
     logo:{ on:logoOn, corner:logoCorner, source:logoSource, scale:logoScale, customSrc:LOGO_SRC.custom||null },
+    brush:{ color:brushColor, sizePct:brushSizePct, opacity:brushOpacity, soft:brushSoft, under:brushUnder,
+            strokes: strokes.map(s=>({color:s.color, sizePct:s.sizePct, opacity:s.opacity,
+                                      soft:s.soft, erase:!!s.erase, pts:s.pts})) },
     empty: emptyMode,
     layers: layers.map(L=> L.type==='text'
       ? { type:'text', text:L.text, font:L.font, weight:L.weight, italic:!!L.italic,
@@ -1338,7 +1568,7 @@ async function applyProject(P){
   sel.value=panel.id;
   $('customwrap').style.display=panel.custom?'block':'none';
   if(panel.custom){ $('cw').value=pj.customW||pj.w||1600; $('ch').value=pj.customH||pj.h||900; applyCustom(); }
-  $('composerSection').style.display=isLogo()?'none':'block';
+  syncSections();
 
   // ---- Export-Format ----
   const out=P.output||{};
@@ -1346,12 +1576,12 @@ async function applyProject(P){
   if(fmt==='jpeg' && bg==='transparent') bg='#ffffff';
   emptyMode=!!P.empty;   // Projekt ohne Quellbild (leere Fläche)
 
-  // ---- Composer ----
+  // ---- Composer + Fläche/Akzent (in v1 lag beides in einem Objekt) ----
   const c=P.composer||{};
   composerOn=!!c.on; bgMode=c.bgMode||'photo'; product=c.product||'museum'; accentCustom=c.accentCustom||'#ff5900';
   eyebrowCaps=c.eyebrowCaps!==false; eyebrowTxt=c.eyebrowTxt||''; titleTxt=c.titleTxt||'';
   sublineTxt=c.sublineTxt||''; metaTxt=c.metaTxt||'';
-  overlayOp=c.overlayOp!=null?c.overlayOp:0.35; textAlign=c.textAlign||'left';
+  overlayOp=c.overlayOp!=null?c.overlayOp:0; textAlign=c.textAlign||'left';
   ctaOn=!!c.ctaOn; ctaLabel=c.ctaLabel||''; ctaArrow=c.ctaArrow||'down';
   textX=c.textX!=null?c.textX:null; textY=c.textY!=null?c.textY:null;
   titleScale=c.titleScale||1; bodyScale=c.bodyScale||1;
@@ -1369,6 +1599,20 @@ async function applyProject(P){
     try{ LOGO_IMG.custom=await decodeImageSrc(lg.customSrc); LOGO_SRC.custom=lg.customSrc; }
     catch(err){ if(logoSource==='custom'){ logoSource='zc'; alert('Das Custom-Logo im Projekt konnte nicht geladen werden — zurück auf das zetcom-Logo.'); } }
   } else if(logoSource==='custom' && !LOGO_IMG.custom) logoSource='zc';
+
+  // ---- Pinsel ----
+  const br=P.brush||{};
+  brushColor=br.color||'#ff5900'; brushSizePct=br.sizePct||0.02;
+  brushOpacity=br.opacity!=null?br.opacity:1; brushSoft=br.soft||0; brushUnder=!!br.under; brushErase=false;
+  strokes = Array.isArray(br.strokes)
+    ? br.strokes.filter(s=>s && Array.isArray(s.pts) && s.pts.length).map(s=>({
+        color:s.color||'#ff5900', sizePct:+s.sizePct||0.02, opacity:s.opacity!=null?+s.opacity:1,
+        soft:+s.soft||0, erase:!!s.erase, pts:s.pts.map(p=>[+p[0]||0, +p[1]||0]) }))
+    : [];
+  curStroke=null; brushBaseDirty=true;
+
+  // ---- v1-Migration: dort waren Abdunklung, Pixel und Logo nur mit dem Composer sichtbar ----
+  if(!(P.version>=2) && !composerOn){ overlayOp=0; pixTpl='none'; pixels=[]; logoOn=false; }
 
   // ---- Quellbild ----
   img=null; imgSrc=null; trim=null;
@@ -1440,10 +1684,18 @@ function syncProjectUI(){
   $('pixSize').value=Math.round(pixSize*1000); $('pxv').textContent=(pixSize*100).toFixed(1)+'%';
   updatePixUI();
 
-  $('logoOn').checked=logoOn; $('logoOpts').style.opacity=logoOn?1:.4;
+  $('logoOn').checked=logoOn; $('logoOpts').style.opacity=logoOn?1:.45;
   $('logoSource').value=logoSource; $('logoUpload').style.display=logoSource==='custom'?'block':'none';
   $('logoCorner').value=logoCorner;
   $('logoScale').value=Math.round(logoScale*100); $('lsv').textContent=Math.round(logoScale*100)+'%';
+
+  $('brushOn').checked=brushOn; $('brushOpts').style.opacity=brushOn?1:.45; syncBrushCursor();
+  $('brushColor').value=brushColor;
+  $('brushSize').value=Math.round(brushSizePct*1000); $('brSizeV').textContent=(brushSizePct*100).toFixed(1)+'%';
+  $('brushOpacity').value=Math.round(brushOpacity*100); $('brOpacV').textContent=Math.round(brushOpacity*100)+'%';
+  $('brushSoft').value=Math.round(brushSoft*100); $('brSoftV').textContent=Math.round(brushSoft*100)+'%';
+  $('brushErase').checked=brushErase; $('brushUnder').checked=brushUnder;
+  syncBrushNote();
 
   const pct=coverScale? Math.round(scale/coverScale*100) : 100;
   $('zoom').value=Math.max(20,Math.min(600,pct)); $('zoomv').textContent=pct+'%';
@@ -1470,9 +1722,10 @@ function attachPalette(inputId, after){
   PAL_MARKS.push(mark);
   return box;
 }
-attachPalette('accentCustom', $('accentCustom').parentElement);            // Composer: Custom-Akzentfarbe
+attachPalette('accentCustom', $('accentCustom').parentElement);            // Fläche & Akzent: Custom-Akzentfarbe
 attachPalette('pixColor',     $('pixColor').parentElement);                // Pixel-Dekor: Farbe des gewählten Pixels
 attachPalette('lyColor',      $('lyColor').parentElement.parentElement);   // Textebene: Schriftfarbe
+attachPalette('brushColor');                                               // Pinsel: Farbe
 // Eyebrow-Palette in den Eyebrow-Block hängen, damit sie mit ihm auf-/zugeht
 attachPalette('lyPixColor',   $('lyEyeOpts'));
 $('lyEyeOpts').appendChild(PAL_BOX.lyPixColor); PAL_BOX.lyPixColor.style.flex='0 0 100%';
@@ -1505,10 +1758,16 @@ function initFont(){
 function initLogos(){ for(const k in LOGO_DATA){ const im=new Image(); im.onload=()=>render(); im.src=LOGO_DATA[k]; LOGO_IMG[k]=im; } }
 
 // ---- init ----
-document.getElementById('composerSection').style.display = isLogo()?'none':'block';
+// Logo-Panels exportieren nur das getrimmte Logo — Aufbau-Abschnitte dort ausblenden.
+function syncSections(){
+  const d = isLogo()? 'none':'block';
+  ['surfaceSection','composerSection','brushSection','pixelSection','logoSection']
+    .forEach(id=>{ const el=$(id); if(el) el.style.display=d; });
+}
+syncSections();
 const _origOnChange=sel.onchange;
-sel.onchange=(ev)=>{ _origOnChange(ev); document.getElementById('composerSection').style.display = isLogo()?'none':'block'; updateBlank(); };
-genPixels(); updatePixUI();
+sel.onchange=(ev)=>{ _origOnChange(ev); syncSections(); updateBlank(); };
+genPixels(); updatePixUI(); syncBrushNote();
 // ---- Accordions (Sidebar aufgeräumt) ----
 document.querySelectorAll('.side .block.acc > .acc-h').forEach(h=>{
   h.addEventListener('click', e=>{
