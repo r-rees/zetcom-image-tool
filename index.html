@@ -24,7 +24,9 @@
   #drop{position:absolute;inset:22px;border:2px dashed var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--mut);font-size:14px;pointer-events:none;transition:.15s}
   #drop.hot{border-color:var(--orange);background:rgba(255,89,0,.05);color:var(--ink)}
   #drop.hidden{display:none}
-  canvas{max-width:100%;max-height:100%;margin:auto;box-shadow:0 2px 20px rgba(0,0,0,.12);cursor:grab;touch-action:none;background:
+  /* Rand liegt als CSS-Outline AUSSERHALB der Fläche — die Kante ist sichtbar, verdeckt aber keinen Bildpixel */
+  canvas{max-width:100%;max-height:100%;margin:auto;box-shadow:0 2px 20px rgba(0,0,0,.12);cursor:grab;touch-action:none;
+    outline:1px solid rgba(17,17,17,.3);outline-offset:0;background:
     repeating-conic-gradient(#eee 0% 25%, #fff 0% 50%) 50%/22px 22px}
   canvas.drag{cursor:grabbing}
   /* Arbeitsflächen-Leiste: Ansicht zoomen (nicht das Bild) + leere Fläche ohne Upload */
@@ -163,6 +165,7 @@
         </div>
         <div id="ratiochips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div>
         <div class="mini" id="customratio" style="margin-top:6px;text-transform:none;letter-spacing:0"></div>
+        <div class="note">Breite und Höhe gehen auch mit der Maus: an den <b>weißen Anfassern</b> an der rechten Kante, an der Unterkante oder in der Ecke rechts unten ziehen. Der Bildzuschnitt bleibt dabei stehen.</div>
       </div>
       <div class="note" id="panelnote"></div>
     </div>
@@ -303,6 +306,11 @@
             <input id="lyOpac" type="range" min="10" max="100" value="100"></div>
           <div class="ctl" style="min-width:0;margin-top:10px"><label>Drehen <b id="lyRotV">0°</b></label>
             <input id="lyRot" type="range" min="-180" max="180" value="0"></div>
+          <div class="btnrow" style="margin-top:12px">
+            <button class="ghost" id="lyCropStart" style="flex:1" title="Rechteck im Bild aufziehen — nur der Inhalt darin bleibt">✂ Beschneiden</button>
+            <button class="ghost" id="lyCropReset" style="flex:1" title="Zuschnitt aufheben, ganzes Bild zurückholen">Zuschnitt ↺</button>
+          </div>
+          <div class="note" id="lyCropNote">Rechteck im Bild aufziehen — nur der Inhalt darin bleibt. Es gehen keine Bilddaten verloren, der Zuschnitt ist jederzeit rücknehmbar.</div>
         </div>
         <div id="shapeLayerCtl" style="display:none">
           <div class="mini" id="shapeKindLbl" style="text-transform:none;letter-spacing:0;color:var(--ink);font-weight:600;font-size:13px">Viereck</div>
@@ -357,6 +365,16 @@
         </div>
       </div>
       <div class="note" id="brushNote">Noch keine Striche.</div>
+    </div>
+
+    <!-- AUSSCHNITT ENTFERNEN — Rechteck aufziehen, Inhalt darin verschwindet -->
+    <div class="block acc" id="cutSection">
+      <h2 class="acc-h">Ausschnitt entfernen</h2>
+      <div class="btnrow">
+        <button class="ghost" id="cutStart" style="flex:1" title="Rechteck aufziehen — der Inhalt darin wird weggeschnitten">▢ Rechteck aufziehen</button>
+        <button class="ghost" id="cutClear" style="flex:1" title="Alle Ausschnitte im Bild zurücknehmen" disabled>alle zurück</button>
+      </div>
+      <div class="note" id="cutNote">Rechteck aufziehen, und der Inhalt darin wird weggeschnitten: aus der ausgewählten Ebene, sonst aus der obersten Ebene darunter, sonst aus dem Hintergrund.</div>
     </div>
 
     <!-- PIXEL-DEKOR — global -->
@@ -520,6 +538,12 @@ let strokes=[], curStroke=null;            // {color,sizePct,opacity,soft,erase,
 let brushBase=null, brushBaseW=0, brushBaseH=0, brushBaseDirty=true, brushScratch=null;
 let emptyMode=false;                       // Grafik ohne Quellbild: leere Fläche in Panelgröße
 let viewZoom=null;                         // Ansicht der Arbeitsfläche: null = ins Fenster einpassen, sonst Faktor
+// ---- Werkzeuge mit Rechteck (Zuschnitt & Ausschnitt) ----
+// cropMode  = Bild-Ebene beschneiden: was im Rechteck liegt, bleibt stehen.
+// cutMode   = Ausschnitt entfernen: was im Rechteck liegt, verschwindet (Ebene oder Hintergrund).
+let cropMode=false, cutMode=false, marquee=null;   // marquee = {x0,y0,x1,y1} in Ziel-px
+let bgCuts=[];                             // Löcher im Hintergrund, {x,y,w,h} als Bruchteil des Zielmaßes
+let frameH=null, frameAcc=null;            // Anfasser + Zwischenmaß beim Ziehen der Custom-Panelgröße
 // zetcom CD (Brand Guidelines): Produkt-Akzente + Neutral-Rampe — Auswahl unter jedem Farbfeld
 const CD_COLORS=[
   ['#ff5900','Museum orange (Lead-Akzent)'],['#f5b400','Monument gelb'],['#d133c3','Art violett'],
@@ -578,7 +602,9 @@ function snapshot(){
     pixTpl, pixSize, pixSel, pixels: pixels.map(p=>({...p})),
     logoOn, logoCorner, logoSource, logoScale,
     brushUnder, strokes: strokes.slice(),
-    layers: layers.map(L=>({...L})), layerSel, selIdx:[...selSet],
+    bgCuts: bgCuts.map(c=>({...c})),
+    layers: layers.map(L=>({...L, crop:L.crop?{...L.crop}:null, cuts:L.cuts?L.cuts.map(c=>({...c})):null})),
+    layerSel, selIdx:[...selSet],
   };
 }
 function applySnapshot(s){
@@ -602,12 +628,14 @@ function applySnapshot(s){
     pixSel = s.pixSel<pixels.length ? s.pixSel : -1;
     logoOn=s.logoOn; logoCorner=s.logoCorner; logoSource=s.logoSource; logoScale=s.logoScale;
     brushUnder=s.brushUnder; strokes=s.strokes.slice(); curStroke=null; brushBaseDirty=true;
-    layers=s.layers.map(L=>({...L}));
+    bgCuts=(s.bgCuts||[]).map(c=>({...c}));
+    layers=s.layers.map(L=>({...L, crop:L.crop?{...L.crop}:null, cuts:L.cuts?L.cuts.map(c=>({...c})):null}));
+    marquee=null; cropMode=false; cutMode=false;
     selSet=new Set(s.selIdx.filter(i=>layers[i]));
     layerSel = layers[s.layerSel] ? s.layerSel : (selSet.size? [...selSet][selSet.size-1] : -1);
     document.getElementById('emptyOn').checked=emptyMode;
     syncSections(); updateBlank(); setupFrame(); syncProjectUI(); updateControls();
-    updateSelUI(); renderLayerList(); render(); syncMeta();
+    updateSelUI(); renderLayerList(); syncToolUI(); render(); syncMeta();
   } finally { histLock=false; }
 }
 
@@ -739,25 +767,93 @@ function render(){
   ctx.clearRect(0,0,FW,FH);
   if(isLogo()){ if(img) renderLogo(); return; }
   const solid = bgMode!=='photo';
-  if(solid){ ctx.fillStyle=bgMode==='black'?'#000':bgMode==='gray'?'#f7f7f7':'#fff'; ctx.fillRect(0,0,FW,FH); }
+  // Wo der Hintergrund ausgeschnitten ist, kommt der Exporthintergrund durch — in der Vorschau genauso wie im Export.
+  if(bgCuts.length && bg!=='transparent'){ ctx.fillStyle=bg; ctx.fillRect(0,0,FW,FH); }
+  if(solid){ ctx.save(); clipBgCuts(ctx,FW,FH);
+    ctx.fillStyle=bgMode==='black'?'#000':bgMode==='gray'?'#f7f7f7':'#fff'; ctx.fillRect(0,0,FW,FH); ctx.restore(); }
   else if(img){
-    ctx.save();
+    ctx.save(); clipBgCuts(ctx,FW,FH);
     ctx.translate(FW/2+tx, FH/2+ty); ctx.rotate(rot*Math.PI/180); ctx.scale(scale*flipX, scale);
     ctx.imageSmoothingQuality='high'; ctx.drawImage(img, -iw/2, -ih/2, iw, ih);
     ctx.restore();
   } else if(emptyMode){ // leere Fläche: Exporthintergrund zeigen, transparent bleibt das CSS-Schachbrett
-    if(bg!=='transparent'){ ctx.fillStyle=bg; ctx.fillRect(0,0,FW,FH); }
-  } else return;
+    if(bg!=='transparent'){ ctx.save(); clipBgCuts(ctx,FW,FH); ctx.fillStyle=bg; ctx.fillRect(0,0,FW,FH); ctx.restore(); }
+  } else { drawFrameHandles(ctx); return; }
   drawScene(ctx, FW, true);
   if(showGuides()){ drawOverlay(); checkGap(); }
-  else { frameBorder(ctx, FW, FH); document.getElementById('gapwarn').classList.remove('show'); }
+  else document.getElementById('gapwarn').classList.remove('show');
+  drawMarquee(ctx);
+  drawFrameHandles(ctx);
 }
+// ---- Löcher: ein Pfad aus Vollfläche + Löchern, mit evenodd geklippt → alles ausser den Rechtecken wird gezeichnet.
+//      Gilt identisch für Vorschau und Export, weil überall in Canvas-Pixeln gerechnet wird.
+function clipRects(g, rects){
+  if(!rects || !rects.length) return false;
+  g.beginPath(); g.rect(0,0,g.canvas.width,g.canvas.height);
+  rects.forEach(r=>g.rect(r.x,r.y,r.w,r.h));
+  g.clip('evenodd'); return true;
+}
+function clipBgCuts(g,cw,ch){ clipRects(g, bgCuts.map(c=>({x:c.x*cw, y:c.y*ch, w:c.w*cw, h:c.h*ch}))); }
+// Ebenen-Löcher liegen relativ zum Ebenen-Ursprung → sie wandern mit, wenn die Ebene verschoben wird.
+// clipLayerCuts setzt nur den Clip (braucht ein umgebendes save/restore), beginLayerCuts nimmt sich
+// ein eigenes save-Paar — nötig, wo nach dem Inhalt noch der Auswahlrahmen gezeichnet wird.
+function clipLayerCuts(g,L,TW,TH,f){
+  if(!L.cuts || !L.cuts.length) return false;
+  return clipRects(g, L.cuts.map(c=>({x:(L.xPct+c.dx)*TW*f, y:(L.yPct+c.dy)*TH*f, w:c.w*TW*f, h:c.h*TH*f})));
+}
+function beginLayerCuts(g,L,TW,TH,f){
+  if(!L.cuts || !L.cuts.length) return false;
+  g.save(); clipLayerCuts(g,L,TW,TH,f); return true;
+}
+const endLayerCuts=(g,on)=>{ if(on) g.restore(); };
 // Drittel-Raster und Safe Zone helfen beim Zuschneiden, stören aber, sobald etwas draufgebaut wird.
 function showGuides(){
   if(!img || bgMode!=='photo') return false;
   return !(composerOn || layers.length || pixels.length || strokes.length || curStroke || (logoOn&&logoReady()));
 }
-function frameBorder(g,w,h){ g.save(); g.strokeStyle='#111'; g.lineWidth=2; g.strokeRect(1,1,w-2,h-2); g.restore(); }
+// ---- Vorschau des aufgezogenen Rechtecks (Zuschnitt orange, Ausschnitt neutral) ----
+function marqueeRect(){
+  if(!marquee) return null;
+  return { x:Math.min(marquee.x0,marquee.x1), y:Math.min(marquee.y0,marquee.y1),
+           w:Math.abs(marquee.x1-marquee.x0), h:Math.abs(marquee.y1-marquee.y0) };
+}
+function drawMarquee(g){
+  const r=marqueeRect(); if(!r) return;
+  const [TW]=targetHW(), f=FW/TW;
+  if(r.w*f<1 || r.h*f<1) return;
+  g.save();
+  g.fillStyle = cropMode? 'rgba(255,89,0,.14)' : 'rgba(17,17,17,.18)';
+  g.fillRect(r.x*f, r.y*f, r.w*f, r.h*f);
+  g.strokeStyle = cropMode? '#ff5900' : '#111'; g.lineWidth=1.5; g.setLineDash([6,4]);
+  g.strokeRect(r.x*f, r.y*f, r.w*f, r.h*f);
+  g.restore();
+}
+// ---- Custom-Panel: Breite und Höhe direkt mit der Maus ziehen ----
+function canResizeFrame(){ return !!panel.custom && !isLogo(); }
+function frameHandles(){
+  if(!canResizeFrame()) return [];
+  return [{id:'e',x:FW-6,y:FH/2,cur:'ew-resize'},{id:'s',x:FW/2,y:FH-6,cur:'ns-resize'},
+          {id:'se',x:FW-6,y:FH-6,cur:'nwse-resize'}];
+}
+function drawFrameHandles(g){
+  const hs=frameHandles(); if(!hs.length) return;
+  g.save();
+  hs.forEach(h=>{ g.fillStyle='#fff'; g.strokeStyle='#111'; g.lineWidth=1.5;
+    g.beginPath(); g.rect(h.x-5, h.y-5, 10, 10); g.fill(); g.stroke(); });
+  g.restore();
+}
+function frameHandleHit(cx,cy){
+  const tol=10;
+  for(const h of frameHandles()) if(Math.abs(cx-h.x)<=tol && Math.abs(cy-h.y)<=tol) return h;
+  return null;
+}
+function setCustomSize(w,h){
+  if(!panel.custom) return;
+  w=Math.max(16,Math.min(8000,Math.round(w)||16)); h=Math.max(16,Math.min(8000,Math.round(h))||16);
+  if(w===panel.w && h===panel.h) return;
+  document.getElementById('cw').value=w; document.getElementById('ch').value=h;
+  applyCustom(); setupFrame(); render(); syncMeta();     // bewusst ohne fitCover: der Bildzuschnitt bleibt stehen
+}
 function drawOverlay(){
   ctx.save();
   // rule-of-thirds
@@ -767,8 +863,6 @@ function drawOverlay(){
   // safe zone for cover panels (85%)
   if(panel.fit==='cover'){ const m=0.075; ctx.strokeStyle='rgba(255,89,0,.7)'; ctx.setLineDash([6,5]);
     ctx.strokeRect(FW*m,FH*m,FW*(1-2*m),FH*(1-2*m)); ctx.setLineDash([]); }
-  // frame border
-  ctx.strokeStyle='#111'; ctx.lineWidth=2; ctx.strokeRect(1,1,FW-2,FH-2);
   ctx.restore();
 }
 
@@ -779,7 +873,6 @@ function renderLogo(){
   const dw=tb.w*s, dh=tb.h*s, dx=(FW-dw)/2, dy=(FH-dh)/2;
   ctx.imageSmoothingQuality='high';
   ctx.drawImage(img, tb.x,tb.y,tb.w,tb.h, dx,dy,dw,dh);
-  ctx.save(); ctx.strokeStyle='#111'; ctx.lineWidth=2; ctx.strokeRect(1,1,FW-2,FH-2); ctx.restore();
   const warn=document.getElementById('gapwarn');
   if(tb.h < panel.h*0.9){
     warn.textContent=`⚠ Logo-Quelle nur ${tb.w}×${tb.h} px — auf ${panel.h}px Höhe hochskaliert, wird unscharf. SVG oder größere Datei liefern.`;
@@ -816,7 +909,17 @@ cv.addEventListener('pointerdown',e=>{
   if(isLogo()) return;
   const canPan=img && bgMode==='photo';
   const {px,py,TW,TH}=evtTarget(e);
-  dragPushed=false; shapeH=null;
+  dragPushed=false; shapeH=null; frameH=null;
+  // 0) Rechteck-Werkzeuge haben Vorrang: erst aufziehen, gerechnet wird beim Loslassen
+  if(cropMode || cutMode){
+    marquee={x0:px,y0:py,x1:px,y1:py};
+    dragMode='marquee'; dragging=true; cv.setPointerCapture(e.pointerId); render(); return; }
+  // 0a) Anfasser der Custom-Panelgröße (nur im Panel „Custom", direkt an der Kante)
+  { const r=cv.width/cv.getBoundingClientRect().width;
+    const h=frameHandleHit(e.offsetX*r, e.offsetY*r);
+    if(h){ pushHist('frame'); dragPushed=true;
+      dragMode='frame'; frameH=h.id; frameAcc={w:panel.w, h:panel.h}; dragging=true;
+      lx=e.clientX; ly=e.clientY; cv.style.cursor=h.cur; cv.setPointerCapture(e.pointerId); return; } }
   // 0) Pinsel-Modus hat Vorrang: malen statt auswählen/verschieben
   if(brushOn && (img||blankMode)){
     pushHist('drag'); dragPushed=true;      // ein Klick malt schon einen Punkt → sofort sichern
@@ -850,6 +953,15 @@ cv.addEventListener('pointerdown',e=>{
 });
 cv.addEventListener('pointermove',e=>{ if(!dragging)return;
   const r=cv.width/cv.getBoundingClientRect().width, dx=(e.offsetX-lx)*r, dy=(e.offsetY-ly)*r, [TW,TH]=targetHW();
+  // Rechteck aufziehen: nur die Vorschau bewegt sich, am State ändert sich noch nichts
+  if(dragMode==='marquee'){ const p=evtTarget(e); marquee.x1=p.px; marquee.y1=p.py; render(); return; }
+  // Panelgröße ziehen: über clientX/Y, weil die Fläche unter dem Zeiger dabei selbst wächst.
+  // Zielpixel pro Bildschirmpixel neu aus dem aktuellen Zoom, Bruchteile werden mitgeschleppt.
+  if(dragMode==='frame'){
+    const tpp=(TW/FW)/(viewFactor()||1);
+    if(frameH.includes('e')) frameAcc.w=Math.max(16,Math.min(8000, frameAcc.w+(e.clientX-lx)*tpp));
+    if(frameH.includes('s')) frameAcc.h=Math.max(16,Math.min(8000, frameAcc.h+(e.clientY-ly)*tpp));
+    lx=e.clientX; ly=e.clientY; setCustomSize(frameAcc.w, frameAcc.h); return; }
   if(dragMode==='brush'){ const p=evtTarget(e); addStrokePoint(p.px/TW, p.py/TH); lx=e.offsetX; ly=e.offsetY; render(); return; }
   if(!dragPushed){ pushHist('drag'); dragPushed=true; }   // reines Auswählen soll keinen Schritt kosten
   if(dragMode==='shapeH'){ const L=layers[layerSel]; if(L) resizeShape(L, shapeH, dx*TW/FW, dy*TH/FH, TW, TH); }
@@ -860,9 +972,20 @@ cv.addEventListener('pointermove',e=>{ if(!dragging)return;
   lx=e.offsetX; ly=e.offsetY; render();});
 cv.addEventListener('pointerup',e=>{
   if(dragMode==='brush') endStroke();
-  dragging=false;dragMode='none';shapeH=null;dragPushed=false;cv.classList.remove('drag');});
+  if(dragMode==='marquee') finishMarquee();
+  if(dragMode==='frame') syncToolUI();
+  dragging=false;dragMode='none';shapeH=null;frameH=null;dragPushed=false;cv.classList.remove('drag');});
 cv.addEventListener('pointercancel',e=>{ if(dragMode==='brush') endStroke();
-  dragging=false;dragMode='none';shapeH=null;dragPushed=false;cv.classList.remove('drag');});
+  if(dragMode==='marquee'){ marquee=null; render(); }
+  if(dragMode==='frame') syncToolUI();
+  dragging=false;dragMode='none';shapeH=null;frameH=null;dragPushed=false;cv.classList.remove('drag');});
+// Zeiger über einem Größen-Anfasser: passender Cursor, damit die Kante als greifbar erkennbar ist
+cv.addEventListener('pointermove',e=>{
+  if(dragging || cropMode || cutMode || brushOn || isLogo()) return;
+  const r=cv.width/cv.getBoundingClientRect().width;
+  const h=frameHandleHit(e.offsetX*r, e.offsetY*r);
+  cv.style.cursor = h ? h.cur : '';
+});
 // Gesten-Ende beendet auch die Zusammenfassung im Verlauf → nächster Zug ist ein eigener Schritt
 document.addEventListener('pointerup',()=>{ histTag=null; });
 cv.addEventListener('wheel',e=>{
@@ -1012,10 +1135,13 @@ document.getElementById('export').onclick=async()=>{
     o.drawImage(img, tb.x,tb.y,tb.w,tb.h, dx,dy,dw,dh);
   } else {
     if(bgMode!=='photo'){ // Statement auf Vollton
+      o.save(); clipBgCuts(o,TW,TH);
       o.fillStyle=bgMode==='black'?'#000':bgMode==='gray'?'#f7f7f7':'#fff'; o.fillRect(0,0,TW,TH);
+      o.restore();
     } else if(img){ // ohne Quellbild (leere Fläche) bleibt nur der Exporthintergrund von oben
       const k=TW/FW; // display→target scale (uniform, aspect preserved)
       o.save();
+      clipBgCuts(o,TW,TH);              // Ausschnitte im Hintergrund: Exporthintergrund kommt durch
       o.translate(TW/2+tx*k, TH/2+ty*k);
       o.rotate(rot*Math.PI/180);
       o.scale(scale*k*flipX, scale*k);
@@ -1401,8 +1527,10 @@ $('logoUpload').onchange=async e=>{ const file=e.target.files[0]; if(!file)retur
   catch(err){ alert('Logo konnte nicht geladen werden: '+err.message); } };
 
 // ---- Pinsel-Steuerung ----
-function syncBrushCursor(){ cv.style.cursor = brushOn ? 'crosshair' : ''; }
-$('brushOn').onchange=e=>{ brushOn=e.target.checked; $('brushOpts').style.opacity=brushOn?1:.45; syncBrushCursor(); };
+function syncBrushCursor(){ cv.style.cursor = (brushOn||cropMode||cutMode) ? 'crosshair' : ''; }
+$('brushOn').onchange=e=>{ brushOn=e.target.checked;
+  if(brushOn && (cropMode||cutMode)){ cropMode=false; cutMode=false; marquee=null; syncToolUI(); render(); }
+  $('brushOpts').style.opacity=brushOn?1:.45; syncBrushCursor(); };
 $('brushColor').oninput=e=>{ brushColor=e.target.value; };
 $('brushSize').oninput=e=>{ brushSizePct=+e.target.value/1000; $('brSizeV').textContent=(brushSizePct*100).toFixed(1)+'%'; };
 $('brushOpacity').oninput=e=>{ brushOpacity=+e.target.value/100; $('brOpacV').textContent=e.target.value+'%'; };
@@ -1412,6 +1540,7 @@ $('brushUnder').onchange=H(null,e=>{ brushUnder=e.target.checked; render(); });
 $('brushUndo').onclick=()=>{ if(!strokes.length)return; pushHist(); undoStroke(); };
 $('brushClear').onclick=()=>{ if(!strokes.length)return; pushHist(); clearStrokes(); };
 document.addEventListener('keydown',e=>{
+  if(e.key==='Escape' && (cropMode||cutMode)){ setCropMode(false); setCutMode(false); return; }
   if(/^(INPUT|TEXTAREA|SELECT)$/.test((e.target&&e.target.tagName)||'')) return;
   if((e.ctrlKey||e.metaKey) && (e.key==='z'||e.key==='Z')){ e.preventDefault(); undoStep(); }
 });
@@ -1496,6 +1625,7 @@ function resizeShape(L,hid,dxT,dyT,TW,TH){
 function drawShapeLayer(g,f,TW,TH,L,selected){
   const x=L.xPct*TW, y=L.yPct*TH, w=L.wPct*TW, h=L.hPct*TH, lw=shapeLW(L,TW);
   g.save();
+  clipLayerCuts(g,L,TW,TH,f);                           // Ausschnitte: das restore unten hebt den Clip auf
   g.globalAlpha = L.opacity!=null? L.opacity : 1;       // Deckkraft = Transparenz der Farbe
   if(L.kind==='line'){
     const [p1,p2]=lineEnds(L,TW,TH);
@@ -1527,6 +1657,7 @@ function segDist(px,py,a,b){
 function drawTextLayer(g,f,TW,TH,L,selected){
   const size=Math.max(6, L.sizePct*TW), eye=!!L.eyebrow;
   g.save(); g.textBaseline='top';
+  const cut=beginLayerCuts(g,L,TW,TH,f);   // Ausschnitte gelten nur für die Schrift, nicht für den Auswahlrahmen
   const track = eye? 0.08*size*f : 0;
   g.letterSpacing = track+'px';
   g.font=`${L.italic?'italic ':''}${L.weight} ${size*f}px ${L.font}`;
@@ -1562,6 +1693,7 @@ function drawTextLayer(g,f,TW,TH,L,selected){
   const blockH = Math.max(1, inkBot-inkTop);
   L._b={x:x0,y:inkTop,w:maxw,h:blockH}; L._o={dx:0,dy:inkTop-y0};
   L._bi={x:x0,y:fullTop,w:maxw,h:Math.max(1,fullBot-fullTop)}; L._oi={dx:0,dy:fullTop-y0};
+  endLayerCuts(g,cut);
   if(selected){ g.strokeStyle='#111'; g.lineWidth=1.5; g.setLineDash([5,4]);
     g.strokeRect(x0*f-4,inkTop*f-4,maxw*f+8,blockH*f+8); g.setLineDash([]); }
   g.restore();
@@ -1569,10 +1701,14 @@ function drawTextLayer(g,f,TW,TH,L,selected){
 function drawImageLayer(g,f,TW,TH,L,selected){
   if(!L.img || !((L.img.naturalWidth||L.img.width)>0)) return;   // Logo-Ebene evtl. noch nicht dekodiert
   const NW=L.img.naturalWidth||L.img.width||1, NH=L.img.naturalHeight||L.img.height||1;
-  const w=Math.max(1,L.wPct*TW), h=w*(NH/NW), x0=L.xPct*TW, y0=L.yPct*TH;
+  // Zuschnitt = Quell-Rechteck im Originalbild (0–1). Ohne Zuschnitt ist es das ganze Bild.
+  const c=(L.crop && L.crop.w>0 && L.crop.h>0) ? L.crop : {x:0,y:0,w:1,h:1};
+  const sx=c.x*NW, sy=c.y*NH, sw=Math.max(1,c.w*NW), sh=Math.max(1,c.h*NH);
+  const w=Math.max(1,L.wPct*TW), h=w*(sh/sw), x0=L.xPct*TW, y0=L.yPct*TH;
   g.save(); g.globalAlpha=L.opacity!=null?L.opacity:1; g.imageSmoothingQuality='high';
+  clipLayerCuts(g,L,TW,TH,f);                   // Ausschnitte liegen fest zur Fläche, nicht mitgedreht
   if(L.rot){ const cx=(x0+w/2)*f, cy=(y0+h/2)*f; g.translate(cx,cy); g.rotate(L.rot*Math.PI/180); g.translate(-cx,-cy); }
-  g.drawImage(L.img, x0*f, y0*f, w*f, h*f);
+  g.drawImage(L.img, sx,sy,sw,sh, x0*f, y0*f, w*f, h*f);
   g.restore();
   L._b={x:x0,y:y0,w:w,h:h}; L._o={dx:0,dy:0}; L._bi=L._b; L._oi=L._o;
   if(selected){ g.save(); g.strokeStyle='#111'; g.lineWidth=1.5; g.setLineDash([5,4]);
@@ -1608,6 +1744,7 @@ function renderLayerList(){
 }
 // additive = zur Auswahl togglen (Umschalt/Cmd/Ctrl); sonst Einzelauswahl. i<0 = alles abwählen.
 function selectLayer(i, additive){
+  clearToolMsgs();                       // Meldung galt für die vorige Auswahl
   if(i<0){ selSet.clear(); layerSel=-1; }
   else if(additive){
     if(selSet.has(i)){ selSet.delete(i); layerSel = selSet.size? [...selSet][selSet.size-1] : -1; }
@@ -1625,7 +1762,9 @@ function updateSelUI(){
 }
 function syncLayerEditor(){
   const ed=$('layerEditor');
-  if(layerSel<0 || !layers[layerSel]){ ed.style.display='none'; return; }
+  if(layerSel<0 || !layers[layerSel]){ ed.style.display='none';
+    if(cropMode){ cropMode=false; marquee=null; }     // ohne Ebene gibt es nichts zu beschneiden
+    syncToolUI(); return; }
   ed.style.display='block'; const L=layers[layerSel];
   const isText=L.type==='text', isShape=L.type==='shape', isImg=L.type==='image';
   $('txtLayerCtl').style.display=isText?'block':'none';
@@ -1655,6 +1794,7 @@ function syncLayerEditor(){
     $('lyOpac').value=Math.round(op*100); $('lyOpacV').textContent=Math.round(op*100)+'%';
     $('lyRot').value=L.rot||0; $('lyRotV').textContent=(L.rot||0)+'°';
   }
+  syncToolUI();
   syncPalettes();
 }
 function addTextLayer(){
@@ -1727,6 +1867,129 @@ $('lyPixColor').oninput=H('lyPixColor',e=>{ if(curL()){ curL().pixColor=e.target
 $('lyImgSize').oninput=H('lyImgSize',e=>{ if(curL()){ curL().wPct=+e.target.value/100; $('lyImgSizeV').textContent=e.target.value+'%'; render(); } });
 $('lyOpac').oninput=H('lyOpac',e=>{ if(curL()){ curL().opacity=+e.target.value/100; $('lyOpacV').textContent=e.target.value+'%'; render(); } });
 $('lyRot').oninput=H('lyRot',e=>{ if(curL()){ curL().rot=+e.target.value; $('lyRotV').textContent=e.target.value+'°'; render(); } });
+
+// ================= RECHTECK-WERKZEUGE: ZUSCHNEIDEN & AUSSCHNITT ENTFERNEN =================
+// Beide ziehen dasselbe Rechteck auf, nur die Auswertung unterscheidet sich:
+//   Zuschneiden  → nur der Inhalt IM Rechteck bleibt (Bild-Ebene, wie eine Beschnittmaske).
+//   Ausschnitt   → der Inhalt IM Rechteck verschwindet (Ebene oder Hintergrund), der Rest bleibt.
+// Der Zuschnitt sitzt als Quell-Rechteck (0–1 des Originalbildes) auf der Ebene, verliert also
+// keine Bilddaten und lässt sich jederzeit zurücknehmen.
+function cropLayer(){ const L=layers[layerSel]; return (L && L.type==='image' && L.img) ? L : null; }
+function cropSrcRect(L){
+  const c=L.crop;
+  return (c && c.w>0 && c.h>0) ? c : {x:0,y:0,w:1,h:1};
+}
+function layerBox(L,TW,TH){                       // gezeichnete Box der Bild-Ebene in Ziel-px
+  const NW=L.img.naturalWidth||L.img.width||1, NH=L.img.naturalHeight||L.img.height||1, c=cropSrcRect(L);
+  const w=Math.max(1,L.wPct*TW), h=w*(c.h*NH)/(c.w*NW);
+  return {x:L.xPct*TW, y:L.yPct*TH, w, h};
+}
+function finishMarquee(){
+  const r=marqueeRect(); marquee=null;
+  const [TW,TH]=targetHW();
+  if(!r || r.w<TW*0.006 || r.h<TH*0.006){ render(); return; }   // Klick ohne Zug: nichts tun
+  if(cropMode) applyCropRect(r,TW,TH); else applyCutRect(r,TW,TH);
+  render();
+}
+function applyCropRect(r,TW,TH){
+  const L=cropLayer();
+  if(!L){ cropMsg('Keine Bild-Ebene ausgewählt — Zuschnitt abgebrochen.'); setCropMode(false); return; }
+  const b=layerBox(L,TW,TH), c=cropSrcRect(L);
+  let x0=r.x, y0=r.y, x1=r.x+r.w, y1=r.y+r.h;
+  // Gedrehte Ebene: Auswahl in die ungedrehte Box zurückdrehen und deren Hüllrechteck nehmen
+  if(L.rot){
+    const cx=b.x+b.w/2, cy=b.y+b.h/2, a=-L.rot*Math.PI/180, cs=Math.cos(a), sn=Math.sin(a);
+    const pts=[[x0,y0],[x1,y0],[x1,y1],[x0,y1]].map(([x,y])=>{
+      const dx=x-cx, dy=y-cy; return [cx+dx*cs-dy*sn, cy+dx*sn+dy*cs]; });
+    x0=Math.min(...pts.map(p=>p[0])); x1=Math.max(...pts.map(p=>p[0]));
+    y0=Math.min(...pts.map(p=>p[1])); y1=Math.max(...pts.map(p=>p[1]));
+  }
+  x0=Math.max(x0,b.x); y0=Math.max(y0,b.y); x1=Math.min(x1,b.x+b.w); y1=Math.min(y1,b.y+b.h);
+  if(x1-x0 < b.w*0.02 || y1-y0 < b.h*0.02){
+    cropMsg('Das Rechteck liegt nicht auf der Bild-Ebene — nichts beschnitten.'); return; }
+  pushHist();
+  const nw=x1-x0, nh=y1-y0;
+  L.crop={ x: c.x + ((x0-b.x)/b.w)*c.w, y: c.y + ((y0-b.y)/b.h)*c.h,
+           w: c.w*(nw/b.w),             h: c.h*(nh/b.h) };
+  // Zuschnitt bleibt optisch an derselben Stelle stehen (bei Drehung über den mitgedrehten Mittelpunkt)
+  let ncx=x0+nw/2, ncy=y0+nh/2;
+  if(L.rot){ const cx=b.x+b.w/2, cy=b.y+b.h/2, a=L.rot*Math.PI/180, cs=Math.cos(a), sn=Math.sin(a);
+    const dx=ncx-cx, dy=ncy-cy; ncx=cx+dx*cs-dy*sn; ncy=cy+dx*sn+dy*cs; }
+  L.xPct=(ncx-nw/2)/TW; L.yPct=(ncy-nh/2)/TH; L.wPct=nw/TW;
+  setCropMode(false);
+  cropMsg(`Beschnitten auf ${Math.round(L.crop.w*100)}×${Math.round(L.crop.h*100)}% des Originalbildes.`);
+  renderLayerList(); syncLayerEditor();
+}
+function resetCrop(){
+  const L=cropLayer(); if(!L || !L.crop) return;
+  pushHist();
+  const b=layerBox(L,...targetHW());
+  const c=L.crop; L.crop=null;
+  L.wPct = L.wPct / c.w;                       // sichtbarer Ausschnitt behält seine Breite, das Ganze wird größer
+  L.xPct = (b.x - c.x/c.w*b.w)/targetHW()[0];  // Ursprung des Originals zurückrechnen
+  L.yPct = (b.y - c.y/c.h*b.h)/targetHW()[1];
+  cropMsg('Zuschnitt aufgehoben — die Ebene zeigt wieder das ganze Bild.');
+  render(); renderLayerList(); syncLayerEditor();
+}
+// Ziel des Ausschnitts: ausgewählte Ebene, sonst die oberste Ebene unter der Mitte, sonst der Hintergrund.
+function applyCutRect(r,TW,TH){
+  let i = (selSet.size===1 && layers[layerSel]) ? layerSel : layerHit(r.x+r.w/2, r.y+r.h/2, TW, TH);
+  pushHist();
+  if(i>=0 && layers[i]){
+    const L=layers[i];
+    L.cuts=[...(L.cuts||[]), {dx:r.x/TW-L.xPct, dy:r.y/TH-L.yPct, w:r.w/TW, h:r.h/TH}];
+    cutMsg(`Ausschnitt aus <b>${layerLabel(L)}</b> entfernt (${L.cuts.length} in dieser Ebene). Rückgängig mit Strg + Z.`);
+  } else {
+    bgCuts=[...bgCuts, {x:r.x/TW, y:r.y/TH, w:r.w/TW, h:r.h/TH}];
+    cutMsg(`Ausschnitt aus dem <b>Hintergrund</b> entfernt (${bgCuts.length}). Dort kommt der Exporthintergrund durch.`);
+  }
+}
+function cutCount(){ return bgCuts.length + layers.reduce((n,L)=>n+((L.cuts&&L.cuts.length)||0), 0); }
+function clearCuts(){
+  if(!cutCount()) return;
+  pushHist(); bgCuts=[]; layers.forEach(L=>{ if(L.cuts) L.cuts=null; });
+  cutMsg('Alle Ausschnitte zurückgesetzt.'); render();
+}
+// Rückmeldung steht im Abschnitt des jeweiligen Werkzeugs, nicht im anderen
+let cropMsgTxt='', cutMsgTxt='';
+function cropMsg(html){ cropMsgTxt=html||''; syncToolUI(); }
+function cutMsg(html){ cutMsgTxt=html||''; syncToolUI(); }
+function clearToolMsgs(){ cropMsgTxt=''; cutMsgTxt=''; }
+function setCropMode(on){
+  cropMode=!!on; if(cropMode){ cutMode=false; stopBrush(); }
+  clearToolMsgs(); marquee=null; syncToolUI(); render();
+}
+function setCutMode(on){
+  cutMode=!!on; if(cutMode){ cropMode=false; stopBrush(); }
+  clearToolMsgs(); marquee=null; syncToolUI(); render();
+}
+function stopBrush(){ if(!brushOn) return; brushOn=false; $('brushOn').checked=false; $('brushOpts').style.opacity=.45; }
+function syncToolUI(){
+  const L=cropLayer();
+  $('lyCropStart').classList.toggle('primary', cropMode);
+  $('lyCropStart').textContent = cropMode? '✂ Rechteck aufziehen …' : '✂ Beschneiden';
+  $('lyCropReset').disabled = !(L && L.crop);
+  $('lyCropNote').innerHTML = cropMsgTxt || (cropMode
+    ? '<b>Jetzt im Bild ein Rechteck aufziehen</b> — was drin liegt, bleibt stehen. <b>Esc</b> bricht ab.'
+    : (L && L.crop
+        ? `Beschnitten auf ${Math.round(L.crop.w*100)}×${Math.round(L.crop.h*100)}% des Originals. „Zuschnitt ↺" holt das ganze Bild zurück.`
+        : 'Rechteck im Bild aufziehen — nur der Inhalt darin bleibt. Es gehen keine Bilddaten verloren, der Zuschnitt ist jederzeit rücknehmbar.'));
+  $('cutStart').classList.toggle('primary', cutMode);
+  $('cutStart').textContent = cutMode? '▢ Rechteck aufziehen …' : '▢ Rechteck aufziehen';
+  $('cutClear').disabled = !cutCount();
+  $('cutNote').innerHTML = cutMsgTxt || (cutMode
+    ? '<b>Jetzt im Bild ein Rechteck aufziehen</b> — was drin liegt, verschwindet. <b>Esc</b> bricht ab.'
+    : (cutCount()? `${cutCount()} Ausschnitt${cutCount()===1?'':'e'} aktiv.`
+        : 'Rechteck aufziehen, und der Inhalt darin wird weggeschnitten: aus der ausgewählten Ebene, sonst aus der obersten Ebene darunter, sonst aus dem Hintergrund.'));
+  cv.style.cursor = (cropMode||cutMode) ? 'crosshair' : (brushOn? 'crosshair' : '');
+}
+$('lyCropStart').onclick=()=>{
+  if(!cropLayer()){ cropMsg('Erst eine Bild-Ebene auswählen.'); return; }
+  setCropMode(!cropMode);
+};
+$('lyCropReset').onclick=()=>resetCrop();
+$('cutStart').onclick=()=>setCutMode(!cutMode);
+$('cutClear').onclick=()=>clearCuts();
 // ---- Form-Steuerung (Viereck & Linie) ----
 $('shFillOn').onchange=H(null,e=>{ const L=curShape(); if(L){ L.fillOn=e.target.checked; render(); } });
 $('shFill').oninput=H('shFill',e=>{ const L=curShape(); if(L){ L.fill=e.target.value; render(); } });
@@ -1795,7 +2058,13 @@ updateSelUI(); renderLayerList();
 // v2: Abdunklung, Pixel-Dekor und Logo hängen nicht mehr am Composer, dazu die Pinselstriche.
 // v3: Form-Ebenen (Viereck/Linie) und Logo-Ebenen. Standardlogos speichern nur ihren Schlüssel
 //     (`logo`), nicht die Bilddaten — die stecken schon im Tool.
-const PROJECT_APP='zetcom-image-cropper', PROJECT_VERSION=3;
+// v4: Zuschnitt der Bild-Ebenen (`crop`) und weggeschnittene Rechtecke (`cuts` je Ebene, `bgCuts` im Hintergrund).
+const PROJECT_APP='zetcom-image-cropper', PROJECT_VERSION=4;
+const cutsOut = L => (L.cuts && L.cuts.length) ? L.cuts.map(c=>({dx:c.dx, dy:c.dy, w:c.w, h:c.h})) : null;
+const cutsIn  = a => Array.isArray(a) && a.length
+  ? a.map(c=>({dx:+c.dx||0, dy:+c.dy||0, w:+c.w||0, h:+c.h||0})).filter(c=>c.w>0 && c.h>0) : null;
+const cropIn  = c => (c && +c.w>0 && +c.h>0)
+  ? {x:Math.max(0,+c.x||0), y:Math.max(0,+c.y||0), w:Math.min(1,+c.w), h:Math.min(1,+c.h)} : null;
 
 function projectState(){
   return {
@@ -1815,17 +2084,19 @@ function projectState(){
             strokes: strokes.map(s=>({color:s.color, sizePct:s.sizePct, opacity:s.opacity,
                                       soft:s.soft, erase:!!s.erase, pts:s.pts})) },
     empty: emptyMode,
+    bgCuts: bgCuts.map(c=>({x:c.x, y:c.y, w:c.w, h:c.h})),
     layers: layers.map(L=> L.type==='text'
       ? { type:'text', text:L.text, font:L.font, weight:L.weight, italic:!!L.italic,
           color:L.color, align:L.align, sizePct:L.sizePct, xPct:L.xPct, yPct:L.yPct,
-          eyebrow:!!L.eyebrow, eyeCaps:L.eyeCaps!==false, pixColor:L.pixColor||null }
+          eyebrow:!!L.eyebrow, eyeCaps:L.eyeCaps!==false, pixColor:L.pixColor||null, cuts:cutsOut(L) }
       : L.type==='shape'
       ? { type:'shape', kind:L.kind, xPct:L.xPct, yPct:L.yPct, wPct:L.wPct, hPct:L.hPct, dir:L.dir||'\\',
           fill:L.fill, fillOn:L.fillOn!==false, stroke:L.stroke, strokeOn:!!L.strokeOn,
-          swPct:L.swPct, opacity:L.opacity }
+          swPct:L.swPct, opacity:L.opacity, cuts:cutsOut(L) }
       : { type:'image', logo:L.logo||null,
           src: (L.logo && L.logo!=='custom') ? null : (L.src||null),   // Standardlogo: Schlüssel genügt
-          wPct:L.wPct, opacity:L.opacity, rot:L.rot, xPct:L.xPct, yPct:L.yPct }),
+          wPct:L.wPct, opacity:L.opacity, rot:L.rot, xPct:L.xPct, yPct:L.yPct,
+          crop: L.crop? {x:L.crop.x, y:L.crop.y, w:L.crop.w, h:L.crop.h} : null, cuts:cutsOut(L) }),
   };
 }
 
@@ -1916,6 +2187,11 @@ async function applyProject(P){
     }catch(err){ alert('Das eingebettete Quellbild konnte nicht geladen werden: '+err.message); }
   }
 
+  // ---- Ausschnitte im Hintergrund ----
+  bgCuts = Array.isArray(P.bgCuts)
+    ? P.bgCuts.map(c=>({x:+c.x||0, y:+c.y||0, w:+c.w||0, h:+c.h||0})).filter(c=>c.w>0 && c.h>0) : [];
+  marquee=null; cropMode=false; cutMode=false; clearToolMsgs();
+
   // ---- Ebenen ----
   layers=[]; selSet.clear(); layerSel=-1;
   for(const L of (P.layers||[])){
@@ -1923,23 +2199,25 @@ async function applyProject(P){
       layers.push({type:'text', text:L.text||'', font:L.font||'"DM Sans"', weight:L.weight||'700',
         italic:!!L.italic, color:L.color||'#ffffff', align:L.align||'left',
         sizePct:L.sizePct||0.05, xPct:L.xPct||0.1, yPct:L.yPct||0.1,
-        eyebrow:!!L.eyebrow, eyeCaps:L.eyeCaps!==false, pixColor:L.pixColor||accentHex()});
+        eyebrow:!!L.eyebrow, eyeCaps:L.eyeCaps!==false, pixColor:L.pixColor||accentHex(),
+        cuts:cutsIn(L.cuts)});
     } else if(L.type==='shape'){
       layers.push({type:'shape', kind: L.kind==='line'?'line':'rect', dir: L.dir==='/'?'/':'\\',
         xPct:+L.xPct||0, yPct:+L.yPct||0,
         wPct:L.wPct!=null?+L.wPct:0.28, hPct:L.hPct!=null?+L.hPct:0.18,
         fill:L.fill||accentHex(), fillOn:L.fillOn!==false,
         stroke:L.stroke||'#111111', strokeOn:!!L.strokeOn,
-        swPct:+L.swPct||0.004, opacity:L.opacity!=null?+L.opacity:1});
+        swPct:+L.swPct||0.004, opacity:L.opacity!=null?+L.opacity:1, cuts:cutsIn(L.cuts)});
     } else if(L.type==='image' && L.logo && L.logo!=='custom' && LOGO_IMG[L.logo]){
       layers.push({type:'image', img:LOGO_IMG[L.logo], logo:L.logo, src:LOGO_DATA[L.logo]||null,
         wPct:L.wPct||0.18, opacity:L.opacity!=null?L.opacity:1, rot:L.rot||0,
-        xPct:L.xPct||0.1, yPct:L.yPct||0.1});
+        xPct:L.xPct||0.1, yPct:L.yPct||0.1, crop:cropIn(L.crop), cuts:cutsIn(L.cuts)});
     } else if(L.type==='image' && L.src){
       try{
         const im=await decodeImageSrc(L.src);
         layers.push({type:'image', img:im, src:L.src, logo:L.logo||null, wPct:L.wPct||0.3,
-          opacity:L.opacity!=null?L.opacity:1, rot:L.rot||0, xPct:L.xPct||0.12, yPct:L.yPct||0.12});
+          opacity:L.opacity!=null?L.opacity:1, rot:L.rot||0, xPct:L.xPct||0.12, yPct:L.yPct||0.12,
+          crop:cropIn(L.crop), cuts:cutsIn(L.cuts)});
       }catch(err){ /* einzelne kaputte Bild-Ebene überspringen, Rest laden */ }
     }
   }
@@ -2065,7 +2343,7 @@ function initLogos(){ for(const k in LOGO_DATA){ const im=new Image(); im.onload
 // Logo-Panels exportieren nur das getrimmte Logo — Aufbau-Abschnitte dort ausblenden.
 function syncSections(){
   const d = isLogo()? 'none':'block';
-  ['surfaceSection','composerSection','brushSection','pixelSection','logoSection']
+  ['surfaceSection','composerSection','brushSection','cutSection','pixelSection','logoSection']
     .forEach(id=>{ const el=$(id); if(el) el.style.display=d; });
 }
 syncSections();
@@ -2079,7 +2357,7 @@ document.querySelectorAll('.side .block.acc > .acc-h').forEach(h=>{
     h.parentElement.classList.toggle('collapsed');
   });
 });
-applyPanelFormat(); setupFrame(); updateControls(); initFont(); initLogos(); render(); syncMeta();
+applyPanelFormat(); setupFrame(); updateControls(); syncToolUI(); initFont(); initLogos(); render(); syncMeta();
 </script>
 </body>
 </html>
