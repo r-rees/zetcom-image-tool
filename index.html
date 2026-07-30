@@ -92,6 +92,8 @@
   .block.acc>.acc-h::after{content:'▾';color:var(--mut);font-size:11px;margin-left:8px;transition:transform .15s}
   .block.acc.collapsed>.acc-h::after{transform:rotate(-90deg)}
   .block.acc.collapsed>:not(.acc-h){display:none!important}
+  /* Warnungen bleiben sichtbar, auch wenn ihr Abschnitt zugeklappt ist */
+  .block.acc.collapsed>.warn.show{display:block!important}
   button.aln{padding:6px 0;min-width:0;flex:1;font-size:15px;line-height:1;font-weight:400}
   /* CD-Palette unter jedem Farbfeld */
   .pal{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
@@ -155,7 +157,7 @@
 
   <!-- SIDEBAR -->
   <div class="side">
-    <div class="block acc">
+    <div class="block acc collapsed">
       <h2 class="acc-h">Panel</h2>
       <select id="panel"></select>
       <div id="customwrap" style="display:none;margin-top:10px">
@@ -171,7 +173,7 @@
     </div>
 
     <!-- FLÄCHE & AKZENT — global, gilt auch ohne Text-Composer -->
-    <div class="block acc" id="surfaceSection">
+    <div class="block acc collapsed" id="surfaceSection">
       <h2 class="acc-h">Fläche &amp; Akzent</h2>
       <label class="mini">Hintergrund</label>
       <select id="bgMode">
@@ -200,7 +202,7 @@
         <span id="compChev" style="color:var(--mut);font-size:11px;transition:transform .15s;transform:rotate(-90deg)">▾</span>
       </h2>
       <div id="compBody" style="display:none">
-        <div class="note" style="margin-top:0">Festes Textlayout: Eyebrow, Titel, Subline, Zusatzzeile, CTA, als <b>ein</b> optisch ausgerichteter Block. Abdunklung, Pixel-Dekor, Logo und Pinsel liegen in eigenen Abschnitten und gehen auch ohne Composer.</div>
+        <div class="note" style="margin-top:0">Festes Textlayout: Eyebrow, Titel, Subline, Zusatzzeile, als <b>ein</b> optisch ausgerichteter Block. Abdunklung, Pixel-Dekor, Logo und Pinsel liegen in eigenen Abschnitten und gehen auch ohne Composer.</div>
 
         <label class="mini" style="margin-top:12px;display:flex;justify-content:space-between;align-items:center">Eyebrow (klein, Akzent)
           <span style="text-transform:none;letter-spacing:0;font-weight:400;display:flex;gap:5px;align-items:center;cursor:pointer">
@@ -212,14 +214,7 @@
         <input id="subline" type="text" placeholder="Project Manager CMS **Benelux** (w/m/d)">
         <label class="mini" style="margin-top:10px">Zusatzzeile (grau, klein)</label>
         <input id="meta" type="text" placeholder="Fully remote · 80–100% · permanent">
-        <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
-          <label class="mini" style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;margin:0">
-            <input type="checkbox" id="ctaOn" style="accent-color:var(--orange)"> CTA-Button</label>
-        </div>
-        <div id="ctaOpts" style="display:none;gap:8px;margin-top:6px">
-          <input id="ctaLabel" type="text" placeholder="Link in Comments" style="flex:2">
-          <select id="ctaArrow" style="flex:1"><option value="down">↓</option><option value="ne">↗</option><option value="none">kein Pfeil</option></select>
-        </div>
+        <div class="note" style="margin-top:10px">Der <b>CTA-Button</b> steckt nicht mehr im Composer, sondern im Abschnitt „Ebenen" (<b>+ CTA</b>): eigene Ebene, frei verschiebbar, mit Hintergrundfarbe.</div>
 
         <div style="display:flex;gap:8px;margin-top:12px">
           <div class="ctl" style="flex:1"><label>Titelgröße <b id="tsv">100%</b></label>
@@ -236,7 +231,7 @@
       </div>
     </div>
 
-    <div class="block acc" id="layersSection">
+    <div class="block acc collapsed" id="layersSection">
       <h2 class="acc-h">Ebenen: Text, Bild, Formen, Logo</h2>
       <div class="btnrow">
         <button class="ghost" id="addTextLayer" style="flex:1">+ Textfeld</button>
@@ -245,6 +240,9 @@
       <div class="btnrow" style="margin-top:6px">
         <button class="ghost" id="addRectLayer" style="flex:1" title="Rechteck, Seitenverhältnis frei mit der Maus">+ Viereck</button>
         <button class="ghost" id="addLineLayer" style="flex:1" title="Linie, beide Endpunkte frei mit der Maus">+ Linie</button>
+      </div>
+      <div class="btnrow" style="margin-top:6px">
+        <button class="ghost" id="addCtaLayer" style="flex:1" title="CTA-Button als eigene Ebene: Hintergrundfarbe, Pfeil, frei verschiebbar">+ CTA-Button</button>
       </div>
       <div style="display:flex;gap:6px;margin-top:6px">
         <select id="logoLayerSrc" style="flex:1" title="Variante für die neue Logo-Ebene">
@@ -298,6 +296,20 @@
             <div><label class="mini">Pixel</label>
               <input id="lyPixColor" type="color" value="#ff5900" style="width:40px;height:38px;padding:0;border:1px solid var(--line);border-radius:2px"></div>
           </div>
+          <!-- Hintergrundfläche hinter dem Text = CTA-Button (auch für Badges und Labels) -->
+          <label class="mini" style="margin-top:12px;display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)">
+            <input type="checkbox" id="lyBoxOn" style="accent-color:var(--orange)"> Hintergrundfläche (CTA-Button)</label>
+          <div id="lyBoxOpts" style="display:none;margin-top:8px">
+            <label class="mini">Hintergrundfarbe</label>
+            <input id="lyBoxColor" type="color" value="#ff5900" style="width:100%;height:38px;padding:0;border:1px solid var(--line);border-radius:2px">
+            <label class="mini" style="margin-top:10px;display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)">
+              <input type="checkbox" id="lyBoxOutline" style="accent-color:var(--orange)"> nur Rand (Outline statt Füllung)</label>
+            <div class="ctl" style="min-width:0;margin-top:10px"><label>Innenabstand <b id="lyBoxPadV">100%</b></label>
+              <input id="lyBoxPad" type="range" min="20" max="220" value="100"></div>
+            <div style="margin-top:10px"><label class="mini">Pfeil</label>
+              <select id="lyArrow"><option value="none">kein Pfeil</option><option value="down">↓ nach unten</option><option value="ne">↗ nach oben rechts</option></select></div>
+            <div class="note">Die Fläche legt sich um das Versalband des Textes, wie der frühere Composer-CTA. Ziehen im Bild verschiebt den ganzen Button, Schriftart, Größe, Stärke und Farbe kommen von oben.</div>
+          </div>
         </div>
         <div id="imgLayerCtl" style="display:none">
           <div class="ctl" style="min-width:0"><label>Breite <b id="lyImgSizeV">30%</b></label>
@@ -342,7 +354,7 @@
     </div>
 
     <!-- PINSEL — freihand malen, global (kein Composer nötig) -->
-    <div class="block acc" id="brushSection">
+    <div class="block acc collapsed" id="brushSection">
       <h2 class="acc-h">Pinsel</h2>
       <label class="mini" style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)">
         <input type="checkbox" id="brushOn" style="accent-color:var(--orange)"> Pinsel-Modus (im Bild malen statt verschieben)</label>
@@ -368,7 +380,7 @@
     </div>
 
     <!-- AUSSCHNITT ENTFERNEN — Rechteck aufziehen, Inhalt darin verschwindet -->
-    <div class="block acc" id="cutSection">
+    <div class="block acc collapsed" id="cutSection">
       <h2 class="acc-h">Ausschnitt entfernen</h2>
       <div class="btnrow">
         <button class="ghost" id="cutStart" style="flex:1" title="Rechteck aufziehen — der Inhalt darin wird weggeschnitten">▢ Rechteck aufziehen</button>
@@ -431,7 +443,7 @@
       <div class="note" style="margin-top:8px">Sitzt im gleichen Rand wie der Composer-Text. Mehrere oder frei platzierte Logos: <b>+ Logo</b> im Abschnitt „Ebenen" fügt jedes Logo einzeln als eigene Ebene ein (Größe, Deckkraft, Drehung, Ausrichten pro Logo). CD-perfekte Cards baut der <b>zetcom-graphics</b>-Skill.</div>
     </div>
 
-    <div class="block acc">
+    <div class="block acc collapsed">
       <h2 class="acc-h">Export-Ziel</h2>
       <div class="meta">
         <div class="big" id="dim">—</div>
@@ -526,7 +538,6 @@ let overlayOp=0;                           // Abdunklung des Fotos — 0, damit 
 // ---- Composer state (nur noch das feste Textlayout) ----
 let composerOn=false, eyebrowCaps=true;
 let eyebrowTxt='', titleTxt='', sublineTxt='', metaTxt='', textAlign='left';
-let ctaOn=false, ctaLabel='', ctaArrow='down';
 let textX=null, textY=null;               // freie Textblock-Position (Ziel-px): linke Kante / optische Oberkante; null = auto
 let titleScale=1, bodyScale=1;             // Textgrößen-Multiplikatoren
 let pixTpl='none', pixSize=0.06;           // Pixelgröße als Bruchteil der Breite
@@ -542,6 +553,7 @@ let viewZoom=null;                         // Ansicht der Arbeitsfläche: null =
 // cropMode  = Bild-Ebene beschneiden: was im Rechteck liegt, bleibt stehen.
 // cutMode   = Ausschnitt entfernen: was im Rechteck liegt, verschwindet (Ebene oder Hintergrund).
 let cropMode=false, cutMode=false, marquee=null;   // marquee = {x0,y0,x1,y1} in Ziel-px
+let projectMigrationNote='';               // Hinweis nach dem Laden alter Projektdateien
 let bgCuts=[];                             // Löcher im Hintergrund, {x,y,w,h} als Bruchteil des Zielmaßes
 let frameH=null, frameAcc=null;            // Anfasser + Zwischenmaß beim Ziehen der Custom-Panelgröße
 // zetcom CD (Brand Guidelines): Produkt-Akzente + Neutral-Rampe — Auswahl unter jedem Farbfeld
@@ -598,7 +610,7 @@ function snapshot(){
     scale, coverScale, rot, tx, ty, flipX,
     bgMode, product, accentCustom, overlayOp,
     composerOn, eyebrowCaps, eyebrowTxt, titleTxt, sublineTxt, metaTxt, textAlign,
-    ctaOn, ctaLabel, ctaArrow, textX, textY, titleScale, bodyScale,
+    textX, textY, titleScale, bodyScale,
     pixTpl, pixSize, pixSel, pixels: pixels.map(p=>({...p})),
     logoOn, logoCorner, logoSource, logoScale,
     brushUnder, strokes: strokes.slice(),
@@ -622,7 +634,6 @@ function applySnapshot(s){
     bgMode=s.bgMode; product=s.product; accentCustom=s.accentCustom; overlayOp=s.overlayOp;
     composerOn=s.composerOn; eyebrowCaps=s.eyebrowCaps; eyebrowTxt=s.eyebrowTxt; titleTxt=s.titleTxt;
     sublineTxt=s.sublineTxt; metaTxt=s.metaTxt; textAlign=s.textAlign;
-    ctaOn=s.ctaOn; ctaLabel=s.ctaLabel; ctaArrow=s.ctaArrow;
     textX=s.textX; textY=s.textY; titleScale=s.titleScale; bodyScale=s.bodyScale;
     pixTpl=s.pixTpl; pixSize=s.pixSize; pixels=s.pixels.map(p=>({...p}));
     pixSel = s.pixSel<pixels.length ? s.pixSel : -1;
@@ -1243,18 +1254,19 @@ function metricsFor(g,f,size,weight){ g.font=`${weight} ${size*f}px "DM Sans"`; 
 // Optische Mitte des Versalbands (für den Eyebrow-Pixel), yTop = Zeilenoberkante.
 function capMidY(g,f,yTop,fontSize){ const m=fontMetrics(g,f,fontSize); return yTop + (m.capGap+m.base)/2; }
 
-// Festes Textlayout: Eyebrow · Titel · Subline · Zusatzzeile · CTA als ein Block.
+// Festes Textlayout: Eyebrow · Titel · Subline · Zusatzzeile als ein Block.
+// Der CTA-Button ist keine Composer-Reihe mehr, er lebt als Textebene mit Hintergrundfläche.
 // Erst werden alle Zeilen gemessen (Reihen mit Vorabstand, Zeilenhöhe und Schriftmetrik),
 // daraus die optische Ink-Box bestimmt, und erst dann gezeichnet. textX/textY beschreiben die
 // linke Kante bzw. die optische Oberkante des Blocks.
 function drawCompText(g,f,TW,TH,M){
   const col=compTextColor(), acc=accentHex(), mut=mutedColor();
   const eySize=Math.round(Math.max(13,TW*0.017)*bodyScale), tSize=Math.round(Math.min(TW*0.075,TH*0.24)*titleScale);
-  const sSize=Math.round(TW*0.033*bodyScale), mSize=Math.round(TW*0.021*bodyScale), cSize=Math.round(TW*0.021*bodyScale);
+  const sSize=Math.round(TW*0.033*bodyScale), mSize=Math.round(TW*0.021*bodyScale);
   const eyStr = eyebrowCaps ? eyebrowTxt.trim().toUpperCase() : eyebrowTxt.trim();
   const hasEy=eyStr!=='', hasT=titleTxt.trim()!=='', hasS=sublineTxt.trim()!=='',
-        hasM=metaTxt.trim()!=='', hasC=ctaOn&&ctaLabel.trim()!=='';
-  if(!(hasEy||hasT||hasS||hasM||hasC)){ textBounds=null; return; }
+        hasM=metaTxt.trim()!=='';
+  if(!(hasEy||hasT||hasS||hasM)){ textBounds=null; return; }
   const maxW=TW-2*M;
   g.save(); g.textBaseline='top'; g.letterSpacing='0px';
 
@@ -1283,24 +1295,13 @@ function drawCompText(g,f,TW,TH,M){
     rows.push({kind:'meta', size:mSize, met, lines, w:groupW(lines),
                lh:Math.round(mSize*1.4), n:lines.length, gap:rows.length?Math.round(mSize*0.8):0});
   }
-  if(hasC){
-    const met=metricsFor(g,f,cSize,700), label=ctaLabel.trim();
-    const arrow = ctaArrow==='down'?'↓':ctaArrow==='ne'?'↗':'';
-    const labelW=g.measureText(label).width/f;
-    const arrowGap=arrow? cSize*0.55:0, arrowW=arrow? g.measureText(arrow).width/f:0;
-    const padX=Math.round(cSize*1.2), padY=Math.round(cSize*0.85);
-    const border=Math.max(2,Math.round(TW*0.0018)), capH=met.base-met.capGap;
-    const boxH=Math.round(capH+padY*2);
-    rows.push({kind:'cta', size:cSize, met, label, arrow, labelW, arrowGap, padX, border, boxH,
-               w:Math.round(labelW+arrowGap+arrowW+padX*2), lh:boxH, n:1, gap:rows.length?Math.round(cSize*1.3):0});
-  }
 
   // ---- 2. Geometrie: Reihen verketten, optische Ink-Box bestimmen ----
   let h=0;
-  for(const r of rows){ r.y=h+r.gap; h=r.y+(r.kind==='cta'? r.boxH : r.n*r.lh); }
+  for(const r of rows){ r.y=h+r.gap; h=r.y+r.n*r.lh; }
   const first=rows[0], last=rows[rows.length-1];
-  const inkTop = first.kind==='cta' ? first.y : first.y+first.met.capGap;
-  const inkBot = last.kind==='cta' ? last.y+last.boxH : last.y+(last.n-1)*last.lh+last.met.base;
+  const inkTop = first.y+first.met.capGap;
+  const inkBot = last.y+(last.n-1)*last.lh+last.met.base;
   const blockW = Math.max(1, ...rows.map(r=>r.w));
   // waagerecht: textX = linke Blockkante (in jeder Ausrichtung ziehbar); senkrecht: textY = optische Oberkante
   const bx = textX!=null ? textX
@@ -1330,14 +1331,6 @@ function drawCompText(g,f,TW,TH,M){
       g.fillStyle=acc; g.fillRect(x*f, sqY*f, r.sq*f, r.sq*f);
       g.fillText(r.txt, (x+r.sq+r.gapSq)*f, y*f);
       g.letterSpacing='0px';
-    } else if(r.kind==='cta'){
-      const x=lineX(r.w);
-      g.strokeStyle=col; g.lineWidth=r.border*f;
-      g.strokeRect(x*f+r.border*f/2, y*f+r.border*f/2, (r.w-r.border)*f, (r.boxH-r.border)*f);
-      g.font=`700 ${r.size*f}px "DM Sans"`; g.letterSpacing='0px'; g.fillStyle=col;
-      const ty=y+(r.boxH-(r.met.base-r.met.capGap))/2-r.met.capGap;   // Versalband in der Box zentrieren
-      g.fillText(r.label, (x+r.padX)*f, ty*f);
-      if(r.arrow) g.fillText(r.arrow, (x+r.padX+r.labelW+r.arrowGap)*f, ty*f);
     } else {
       let yy=y; for(const ln of r.lines){ drawRunLine(ln,r.size,r.kind,yy); yy+=r.lh; }
     }
@@ -1493,9 +1486,6 @@ $('eyebrowCaps').onchange=H(null,e=>{ eyebrowCaps=e.target.checked; render(); })
 $('title').oninput=H('title',e=>{ titleTxt=e.target.value; render(); });
 $('subline').oninput=H('subline',e=>{ sublineTxt=e.target.value; render(); });
 $('meta').oninput=H('metaTxt',e=>{ metaTxt=e.target.value; render(); });
-$('ctaOn').onchange=H(null,e=>{ ctaOn=e.target.checked; $('ctaOpts').style.display=ctaOn?'flex':'none'; render(); });
-$('ctaLabel').oninput=H('cta',e=>{ ctaLabel=e.target.value; render(); });
-$('ctaArrow').onchange=H(null,e=>{ ctaArrow=e.target.value; render(); });
 $('textAlign').onchange=H(null,e=>{ textAlign=e.target.value; render(); });
 $('resetText').onclick=()=>{ pushHist(); textX=null; textY=null; render(); };
 $('titleScale').oninput=H('titleScale',e=>{ titleScale=+e.target.value/100; $('tsv').textContent=e.target.value+'%'; render(); });
@@ -1667,17 +1657,40 @@ function drawTextLayer(g,f,TW,TH,L,selected){
   const met=fontMetrics(g,f,size);
   // Eyebrow: Akzent-Pixel vor der ersten Zeile, alle Zeilen um Pixel + Abstand eingerückt
   const sq = eye? Math.max(6, Math.round(size*0.85)) : 0, gapSq = eye? size*0.5 : 0, ind = eye? sq+gapSq : 0;
+  // CTA-Pfeil: sitzt mit Abstand hinter der letzten Zeile und zählt zu ihrer Breite
+  const arrowStr = L.arrow==='down' ? '↓' : L.arrow==='ne' ? '↗' : '';
+  const arrowGap = arrowStr ? size*0.55 : 0;
+  const arrowW   = arrowStr ? Math.max(0, g.measureText(arrowStr).width-track)/f : 0;
   // Tracking hinter dem letzten Zeichen abziehen, sonst wird der Block zu breit und zentriert schief
-  let maxw=1; const ws=lines.map(ln=>{ const w=Math.max(0,g.measureText(ln).width-(ln.length?track:0))/f; if(w>maxw)maxw=w; return w; });
+  const nl=Math.max(lines.length,1), lastI=lines.length-1;
+  const wsText=lines.map(ln=>Math.max(0,g.measureText(ln).width-(ln.length?track:0))/f);
+  const ws=wsText.map((w,li)=> w + (li===lastI ? arrowGap+arrowW : 0));
+  let maxw=1; ws.forEach(w=>{ if(w>maxw) maxw=w; });
   const x0=L.xPct*TW, y0=L.yPct*TH;
   const sqY = eye? capMidY(g,f,y0,size)-sq/2 : 0;
+  // Hintergrundfläche (CTA-Button): legt sich mit Innenabstand um das Versalband des Textes,
+  // genau wie der frühere Composer-CTA. Wird vor der Schrift gezeichnet.
+  const capTop=y0+met.capGap, capBot=y0+(nl-1)*lh+met.base;
+  let box=null;
+  if(L.boxOn){
+    const ps=L.boxPad!=null?L.boxPad:1;
+    const padX=Math.round(size*1.2*ps), padY=Math.round(size*0.85*ps);
+    box={x:x0+ind-padX, y:capTop-padY, w:maxw+padX*2, h:(capBot-capTop)+padY*2};
+    const bcol=L.boxColor||accentHex();
+    if(L.boxOutline){
+      const bw=Math.max(2,Math.round(TW*0.0018));
+      g.strokeStyle=bcol; g.lineWidth=bw*f;
+      g.strokeRect(box.x*f+bw*f/2, box.y*f+bw*f/2, (box.w-bw)*f, (box.h-bw)*f);
+    } else { g.fillStyle=bcol; g.fillRect(box.x*f, box.y*f, box.w*f, box.h*f); }
+  }
   if(eye){ g.fillStyle = L.pixColor || accentHex(); g.fillRect(x0*f, sqY*f, sq*f, sq*f); }
   g.fillStyle=L.color;
   lines.forEach((ln,li)=>{ let x=x0+ind;
     if(L.align==='center') x+= (maxw-ws[li])/2; else if(L.align==='right') x+= (maxw-ws[li]);
-    g.fillText(ln, x*f, (y0+li*lh)*f); });
+    g.fillText(ln, x*f, (y0+li*lh)*f);
+    if(arrowStr && li===lastI) g.fillText(arrowStr, (x+wsText[li]+arrowGap)*f, (y0+li*lh)*f);
+  });
   maxw+=ind;
-  const nl=Math.max(lines.length,1);
   // _b = typografische Box: oben Versalhöhe, unten Grundlinie der letzten Zeile. Damit sitzen
   //      mehrere Textebenen beim Ausrichten auf einer gemeinsamen Grundlinie (statt auf em-Boxen).
   // _bi = echte Tintenkante inkl. Ober-/Unterlängen. Die gilt beim Ausrichten am Rahmen, sonst
@@ -1690,12 +1703,18 @@ function drawTextLayer(g,f,TW,TH,L,selected){
   const inkBot = y0+(nl-1)*lh+met.base;
   const fullTop = eye? Math.min(y0+ascInk, sqY) : y0+ascInk;
   const fullBot = y0+(nl-1)*lh+Math.max(descInk, met.base);
-  const blockH = Math.max(1, inkBot-inkTop);
-  L._b={x:x0,y:inkTop,w:maxw,h:blockH}; L._o={dx:0,dy:inkTop-y0};
-  L._bi={x:x0,y:fullTop,w:maxw,h:Math.max(1,fullBot-fullTop)}; L._oi={dx:0,dy:fullTop-y0};
+  // Mit Hintergrundfläche zählt deren Kante mit: der Button wird als Ganzes gegriffen und ausgerichtet.
+  const uni=(top,bot)=> box
+    ? {x:Math.min(x0,box.x), y:Math.min(top,box.y),
+       w:Math.max(x0+maxw, box.x+box.w)-Math.min(x0,box.x),
+       h:Math.max(bot,box.y+box.h)-Math.min(top,box.y)}
+    : {x:x0, y:top, w:maxw, h:Math.max(1,bot-top)};
+  const bIn=uni(inkTop,inkBot), bFull=uni(fullTop,fullBot);
+  L._b={...bIn, h:Math.max(1,bIn.h)}; L._o={dx:bIn.x-x0, dy:bIn.y-y0};
+  L._bi={...bFull, h:Math.max(1,bFull.h)}; L._oi={dx:bFull.x-x0, dy:bFull.y-y0};
   endLayerCuts(g,cut);
   if(selected){ g.strokeStyle='#111'; g.lineWidth=1.5; g.setLineDash([5,4]);
-    g.strokeRect(x0*f-4,inkTop*f-4,maxw*f+8,blockH*f+8); g.setLineDash([]); }
+    g.strokeRect(L._b.x*f-4, L._b.y*f-4, L._b.w*f+8, L._b.h*f+8); g.setLineDash([]); }
   g.restore();
 }
 function drawImageLayer(g,f,TW,TH,L,selected){
@@ -1730,7 +1749,8 @@ function layerLabel(L){
   if(L.type==='shape') return L.kind==='line' ? '╱ Linie' : '▭ Viereck';
   if(L.type==='image') return L.logo ? ('⬢ Logo'+(L.logo==='custom'?' (Upload)':L.logo==='zcDark'?' (dunkle BG)':'')) : '🖼 Bild';
   const t=(L.text||'').replace(/\n/g,' ').trim();
-  return (L.eyebrow?'▪ ':'¶ ')+(t ? (t.length>22?t.slice(0,22)+'…':t) : 'Textfeld');
+  const icon = L.boxOn ? '▭ ' : L.eyebrow ? '▪ ' : '¶ ';
+  return icon+(t ? (t.length>22?t.slice(0,22)+'…':t) : (L.boxOn?'CTA':'Textfeld'));
 }
 function renderLayerList(){
   const box=$('layerList'); box.innerHTML='';
@@ -1788,6 +1808,11 @@ function syncLayerEditor(){
     $('lySize').value=Math.round(L.sizePct*1000); $('lySizeV').textContent=Math.round(L.sizePct*TW)+'px';
     $('lyEyebrow').checked=!!L.eyebrow; $('lyEyeOpts').style.display=L.eyebrow?'flex':'none';
     $('lyEyeCaps').checked=L.eyeCaps!==false; $('lyPixColor').value=L.pixColor||accentHex();
+    const pad=L.boxPad!=null?L.boxPad:1;
+    $('lyBoxOn').checked=!!L.boxOn; $('lyBoxOpts').style.display=L.boxOn?'block':'none';
+    $('lyBoxColor').value=L.boxColor||accentHex(); $('lyBoxOutline').checked=!!L.boxOutline;
+    $('lyBoxPad').value=Math.round(pad*100); $('lyBoxPadV').textContent=Math.round(pad*100)+'%';
+    $('lyArrow').value=L.arrow||'none';
   } else {
     const op=L.opacity!=null?L.opacity:1;
     $('lyImgSize').value=Math.round(L.wPct*100); $('lyImgSizeV').textContent=Math.round(L.wPct*100)+'%';
@@ -1802,7 +1827,19 @@ function addTextLayer(){
   const off=Math.min(0.3, layers.filter(l=>l.type==='text').length*0.06);
   layers.push({type:'text', text:'Neuer Text', font:'"DM Sans"', weight:'700', italic:false,
     color: composerOn? compTextColor() : '#ffffff', align:'left', sizePct:0.05, xPct:0.1+off, yPct:0.1+off,
-    eyebrow:false, eyeCaps:true, pixColor:accentHex()});
+    eyebrow:false, eyeCaps:true, pixColor:accentHex(),
+    boxOn:false, boxColor:accentHex(), boxOutline:false, boxPad:1, arrow:'none'});
+  selectLayer(layers.length-1);
+}
+// CTA-Button = Textebene mit Hintergrundfläche und Pfeil. Steckt im gleichen Ebenen-Stack,
+// also frei verschiebbar, ausrichtbar, mit Ausschnitten und Rückgängig wie jede andere Ebene.
+function addCtaLayer(){
+  pushHist();
+  const n=layers.filter(l=>l.type==='text' && l.boxOn).length, off=Math.min(0.24, n*0.07);
+  layers.push({type:'text', text:'Link in Comments', font:'"DM Sans"', weight:'700', italic:false,
+    color:'#ffffff', align:'left', sizePct:0.021, xPct:0.08, yPct:0.74-off,
+    eyebrow:false, eyeCaps:true, pixColor:accentHex(),
+    boxOn:true, boxColor:accentHex(), boxOutline:false, boxPad:1, arrow:'down'});
   selectLayer(layers.length-1);
 }
 async function addImageLayerFromFile(file){
@@ -1842,6 +1879,7 @@ const curShape=()=> (curL() && curL().type==='shape') ? curL() : null;
 $('addTextLayer').onclick=()=>addTextLayer();
 $('addImgLayer').onclick=()=>$('layerImgFile').click();
 $('layerImgFile').onchange=e=>{ if(e.target.files[0]) addImageLayerFromFile(e.target.files[0]); e.target.value=''; };
+$('addCtaLayer').onclick=()=>addCtaLayer();
 $('addRectLayer').onclick=()=>addShapeLayer('rect');
 $('addLineLayer').onclick=()=>addShapeLayer('line');
 $('addLogoLayer').onclick=()=>{ const k=$('logoLayerSrc').value;
@@ -1863,6 +1901,14 @@ $('lyEyebrow').onchange=H(null,e=>{ if(curL()){ const L=curL(); L.eyebrow=e.targ
   $('lyEyeOpts').style.display=L.eyebrow?'flex':'none'; $('lyEyeCaps').checked=L.eyeCaps!==false;
   $('lyPixColor').value=L.pixColor||accentHex(); render(); renderLayerList(); } });
 $('lyEyeCaps').onchange=H(null,e=>{ if(curL()){ curL().eyeCaps=e.target.checked; render(); } });
+$('lyBoxOn').onchange=H(null,e=>{ if(curL()){ const L=curL(); L.boxOn=e.target.checked;
+  if(L.boxOn && !L.boxColor) L.boxColor=accentHex();
+  $('lyBoxOpts').style.display=L.boxOn?'block':'none'; render(); renderLayerList(); } });
+$('lyBoxColor').oninput=H('lyBoxColor',e=>{ if(curL()){ curL().boxColor=e.target.value; render(); } });
+$('lyBoxOutline').onchange=H(null,e=>{ if(curL()){ curL().boxOutline=e.target.checked; render(); } });
+$('lyBoxPad').oninput=H('lyBoxPad',e=>{ if(curL()){ curL().boxPad=+e.target.value/100;
+  $('lyBoxPadV').textContent=e.target.value+'%'; render(); } });
+$('lyArrow').onchange=H(null,e=>{ if(curL()){ curL().arrow=e.target.value; render(); } });
 $('lyPixColor').oninput=H('lyPixColor',e=>{ if(curL()){ curL().pixColor=e.target.value; render(); } });
 $('lyImgSize').oninput=H('lyImgSize',e=>{ if(curL()){ curL().wPct=+e.target.value/100; $('lyImgSizeV').textContent=e.target.value+'%'; render(); } });
 $('lyOpac').oninput=H('lyOpac',e=>{ if(curL()){ curL().opacity=+e.target.value/100; $('lyOpacV').textContent=e.target.value+'%'; render(); } });
@@ -2059,7 +2105,9 @@ updateSelUI(); renderLayerList();
 // v3: Form-Ebenen (Viereck/Linie) und Logo-Ebenen. Standardlogos speichern nur ihren Schlüssel
 //     (`logo`), nicht die Bilddaten — die stecken schon im Tool.
 // v4: Zuschnitt der Bild-Ebenen (`crop`) und weggeschnittene Rechtecke (`cuts` je Ebene, `bgCuts` im Hintergrund).
-const PROJECT_APP='zetcom-image-cropper', PROJECT_VERSION=4;
+// v5: der CTA-Button ist keine Composer-Reihe mehr, sondern eine Textebene mit Hintergrundfläche
+//     (`boxOn`/`boxColor`/`boxOutline`/`boxPad`/`arrow`). Alte Dateien wandeln ihn beim Laden um.
+const PROJECT_APP='zetcom-image-cropper', PROJECT_VERSION=5;
 const cutsOut = L => (L.cuts && L.cuts.length) ? L.cuts.map(c=>({dx:c.dx, dy:c.dy, w:c.w, h:c.h})) : null;
 const cutsIn  = a => Array.isArray(a) && a.length
   ? a.map(c=>({dx:+c.dx||0, dy:+c.dy||0, w:+c.w||0, h:+c.h||0})).filter(c=>c.w>0 && c.h>0) : null;
@@ -2076,7 +2124,7 @@ function projectState(){
     source: imgSrc ? { src:imgSrc, view:{ scale, rot, tx, ty, flipX } } : null,
     composer:{ on:composerOn, bgMode, product, accentCustom, eyebrowCaps,
                eyebrowTxt, titleTxt, sublineTxt, metaTxt, overlayOp, textAlign,
-               ctaOn, ctaLabel, ctaArrow, textX, textY, titleScale, bodyScale },
+               textX, textY, titleScale, bodyScale },
     pixels:{ tpl:pixTpl, size:pixSize,
              items:pixels.map(p=>({ax:p.ax, ay:p.ay, gx:p.gx, gy:p.gy, c:p.c})) },
     logo:{ on:logoOn, corner:logoCorner, source:logoSource, scale:logoScale, customSrc:LOGO_SRC.custom||null },
@@ -2088,7 +2136,9 @@ function projectState(){
     layers: layers.map(L=> L.type==='text'
       ? { type:'text', text:L.text, font:L.font, weight:L.weight, italic:!!L.italic,
           color:L.color, align:L.align, sizePct:L.sizePct, xPct:L.xPct, yPct:L.yPct,
-          eyebrow:!!L.eyebrow, eyeCaps:L.eyeCaps!==false, pixColor:L.pixColor||null, cuts:cutsOut(L) }
+          eyebrow:!!L.eyebrow, eyeCaps:L.eyeCaps!==false, pixColor:L.pixColor||null, cuts:cutsOut(L),
+          boxOn:!!L.boxOn, boxColor:L.boxColor||null, boxOutline:!!L.boxOutline,
+          boxPad:L.boxPad!=null?L.boxPad:1, arrow:L.arrow||'none' }
       : L.type==='shape'
       ? { type:'shape', kind:L.kind, xPct:L.xPct, yPct:L.yPct, wPct:L.wPct, hPct:L.hPct, dir:L.dir||'\\',
           fill:L.fill, fillOn:L.fillOn!==false, stroke:L.stroke, strokeOn:!!L.strokeOn,
@@ -2119,7 +2169,7 @@ async function loadProject(file){
   if(!P || P.app!==PROJECT_APP){ alert('Das ist keine Projektdatei des Image Croppers (.zic.json).'); return; }
   if(P.version>PROJECT_VERSION){ alert('Die Projektdatei stammt aus einer neueren Version des Tools. Es wird versucht, sie trotzdem zu laden.'); }
   try{ await applyProject(P); clearHist();     // geladener Stand ist der neue Anfang
-    $('projectNote').textContent='Projekt geladen'+(P.savedAt?' (gespeichert '+new Date(P.savedAt).toLocaleString('de-CH')+')':'')+'.'; }
+    $('projectNote').innerHTML='Projekt geladen'+(P.savedAt?' (gespeichert '+new Date(P.savedAt).toLocaleString('de-CH')+')':'')+'.'+projectMigrationNote; }
   catch(err){ alert('Projekt konnte nicht geladen werden: '+err.message); }
 }
 
@@ -2144,7 +2194,6 @@ async function applyProject(P){
   eyebrowCaps=c.eyebrowCaps!==false; eyebrowTxt=c.eyebrowTxt||''; titleTxt=c.titleTxt||'';
   sublineTxt=c.sublineTxt||''; metaTxt=c.metaTxt||'';
   overlayOp=c.overlayOp!=null?c.overlayOp:0; textAlign=c.textAlign||'left';
-  ctaOn=!!c.ctaOn; ctaLabel=c.ctaLabel||''; ctaArrow=c.ctaArrow||'down';
   textX=c.textX!=null?c.textX:null; textY=c.textY!=null?c.textY:null;
   titleScale=c.titleScale||1; bodyScale=c.bodyScale||1;
 
@@ -2200,7 +2249,9 @@ async function applyProject(P){
         italic:!!L.italic, color:L.color||'#ffffff', align:L.align||'left',
         sizePct:L.sizePct||0.05, xPct:L.xPct||0.1, yPct:L.yPct||0.1,
         eyebrow:!!L.eyebrow, eyeCaps:L.eyeCaps!==false, pixColor:L.pixColor||accentHex(),
-        cuts:cutsIn(L.cuts)});
+        cuts:cutsIn(L.cuts), boxOn:!!L.boxOn, boxColor:L.boxColor||accentHex(),
+        boxOutline:!!L.boxOutline, boxPad:L.boxPad!=null?+L.boxPad:1,
+        arrow:['down','ne'].includes(L.arrow)?L.arrow:'none'});
     } else if(L.type==='shape'){
       layers.push({type:'shape', kind: L.kind==='line'?'line':'rect', dir: L.dir==='/'?'/':'\\',
         xPct:+L.xPct||0, yPct:+L.yPct||0,
@@ -2220,6 +2271,20 @@ async function applyProject(P){
           crop:cropIn(L.crop), cuts:cutsIn(L.cuts)});
       }catch(err){ /* einzelne kaputte Bild-Ebene überspringen, Rest laden */ }
     }
+  }
+
+  // ---- v4-Migration: Composer-CTA wird eine Textebene mit Hintergrundfläche ----
+  // Position ist nicht rekonstruierbar (der CTA hing am Ende des Textblocks), darum unten links
+  // im Composer-Rand. Der Hinweis in der Projekt-Notiz sagt, dass sie zu prüfen ist.
+  projectMigrationNote='';
+  if(!(P.version>=5) && c.ctaOn && (c.ctaLabel||'').trim()){
+    layers.push({type:'text', text:(c.ctaLabel||'').trim(), font:'"DM Sans"', weight:'700', italic:false,
+      color: (c.bgMode==='white'||c.bgMode==='gray') ? '#000000' : '#ffffff',
+      align:'left', sizePct:0.021, xPct:0.055, yPct:0.80,
+      eyebrow:false, eyeCaps:true, pixColor:accentHex(), cuts:null,
+      boxOn:true, boxOutline:true, boxColor:(c.bgMode==='white'||c.bgMode==='gray') ? '#000000' : '#ffffff',
+      boxPad:1, arrow:['down','ne'].includes(c.ctaArrow)?c.ctaArrow:'none'});
+    projectMigrationNote=' Der CTA-Button aus dem Composer ist jetzt eine <b>Ebene</b> (unten links abgelegt) — Position bitte prüfen.';
   }
 
   $('fname').value=P.fname||'';
@@ -2253,8 +2318,6 @@ function syncProjectUI(){
   syncAccentPalette();
   $('eyebrow').value=eyebrowTxt; $('eyebrowCaps').checked=eyebrowCaps;
   $('title').value=titleTxt; $('subline').value=sublineTxt; $('meta').value=metaTxt;
-  $('ctaOn').checked=ctaOn; $('ctaOpts').style.display=ctaOn?'flex':'none';
-  $('ctaLabel').value=ctaLabel; $('ctaArrow').value=ctaArrow;
   $('textAlign').value=textAlign;
   $('titleScale').value=Math.round(titleScale*100); $('tsv').textContent=Math.round(titleScale*100)+'%';
   $('bodyScale').value=Math.round(bodyScale*100);  $('bsv').textContent=Math.round(bodyScale*100)+'%';
@@ -2309,6 +2372,7 @@ attachPalette('brushColor');                                               // Pi
 attachPalette('shFill');                                                   // Form: Füllfarbe
 attachPalette('shStroke');                                                 // Form: Rand-/Linienfarbe
 // Eyebrow-Palette in den Eyebrow-Block hängen, damit sie mit ihm auf-/zugeht
+attachPalette('lyBoxColor');                                               // Textebene: Hintergrundfläche (CTA)
 attachPalette('lyPixColor',   $('lyEyeOpts'));
 $('lyEyeOpts').appendChild(PAL_BOX.lyPixColor); PAL_BOX.lyPixColor.style.flex='0 0 100%';
 // Custom-Akzent nur zeigen, wenn „Custom-Farbe …" gewählt ist (wie das Farbfeld selbst)
