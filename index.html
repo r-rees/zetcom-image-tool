@@ -1380,16 +1380,19 @@ function drawCompText(g,f,TW,TH,M){
 }
 
 // ---- Pixel-Dekor: vorgefertigt, dann einzeln verschieb-/färbbar. Paare per Grid-Offset → immer Ecke an Ecke (skaliert mit Größe) ----
+// CD-Regel (Robin 30.07.2026): das Zweierpaar Gelb+Blau ist gesperrt. Deshalb steht in
+// corners6/team6 im Paar Magenta statt Gelb, und Gelb sitzt als Einzelquadrat.
+// Andere Paare sind offen. Bei neuen Templates: nie ci:1 direkt neben ci:0.
 function pixelTemplateDefs(tpl){
   switch(tpl){
-    case 'corners6': return [                     // blau/amber oben links (diagonal), orange/violett unten rechts, magenta einzeln
-      {ax:0.05,ay:0.06,gx:1,gy:0,ci:0},{ax:0.05,ay:0.06,gx:0,gy:1,ci:1},
+    case 'corners6': return [                     // blau/magenta oben links (diagonal), orange/violett unten rechts, gelb einzeln
+      {ax:0.05,ay:0.06,gx:1,gy:0,ci:0},{ax:0.05,ay:0.06,gx:0,gy:1,ci:2},
       {ax:0.88,ay:0.70,gx:0,gy:0,ci:3},{ax:0.88,ay:0.70,gx:-1,gy:1,ci:4},
-      {ax:0.70,ay:0.40,gx:0,gy:0,ci:2}];
-    case 'team6': return [
-      {ax:0.04,ay:0.42,gx:1,gy:0,ci:0},{ax:0.04,ay:0.42,gx:0,gy:1,ci:1},
+      {ax:0.70,ay:0.40,gx:0,gy:0,ci:1}];
+    case 'team6': return [                        // blau/magenta links (diagonal), orange/violett mittig, gelb einzeln
+      {ax:0.04,ay:0.42,gx:1,gy:0,ci:0},{ax:0.04,ay:0.42,gx:0,gy:1,ci:2},
       {ax:0.64,ay:0.50,gx:1,gy:0,ci:3},{ax:0.64,ay:0.50,gx:0,gy:1,ci:4},
-      {ax:0.88,ay:0.70,gx:0,gy:0,ci:2}];
+      {ax:0.88,ay:0.70,gx:0,gy:0,ci:1}];
     case 'sparse6': return [
       {ax:0.84,ay:0.08,gx:0,gy:0,ci:3},{ax:0.84,ay:0.08,gx:1,gy:1,ci:4},
       {ax:0.06,ay:0.78,gx:1,gy:0,ci:0},{ax:0.06,ay:0.78,gx:0,gy:-1,ci:2}];
