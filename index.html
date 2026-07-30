@@ -304,6 +304,10 @@
             <input id="lyBoxColor" type="color" value="#ff5900" style="width:100%;height:38px;padding:0;border:1px solid var(--line);border-radius:2px">
             <label class="mini" style="margin-top:10px;display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)">
               <input type="checkbox" id="lyBoxOutline" style="accent-color:var(--orange)"> nur Rand (Outline statt Füllung)</label>
+            <div class="ctl" id="lyBoxSwWrap" style="min-width:0;margin-top:10px;display:none"><label>Randstärke <b id="lyBoxSwV">—</b></label>
+              <input id="lyBoxSw" type="range" min="1" max="40" value="13"></div>
+            <div class="ctl" style="min-width:0;margin-top:10px"><label>Deckkraft der Fläche <b id="lyBoxOpacV">100%</b></label>
+              <input id="lyBoxOpac" type="range" min="0" max="100" value="100"></div>
             <div class="ctl" style="min-width:0;margin-top:10px"><label>Innenabstand <b id="lyBoxPadV">100%</b></label>
               <input id="lyBoxPad" type="range" min="20" max="220" value="100"></div>
             <div style="margin-top:10px"><label class="mini">Pfeil</label>
@@ -479,9 +483,11 @@
     <div class="block">
       <h2>Dateiname</h2>
       <input id="fname" type="text" placeholder="z. B. museumplus-hero">
-      <button class="primary" id="export" style="width:100%;margin-top:12px" disabled>Exportieren & herunterladen</button>
+      <label class="mini" id="askPathWrap" style="margin-top:10px;display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)">
+        <input type="checkbox" id="askPath" checked style="accent-color:var(--orange)"> Zielort beim Speichern wählen</label>
+      <button class="primary" id="export" style="width:100%;margin-top:12px" disabled>Exportieren & speichern</button>
       <a class="dl" id="dl"></a>
-      <div class="note">Tipp: <kbd>Scrollrad</kbd> zoomt am Cursor · <kbd>ziehen</kbd> verschiebt. Logo-Panels werden <b>auto-getrimmt</b> (kein Crop) — für scharfe Logos SVG oder ≥144px hoch liefern. Batch für viele Logos: <b>relaunch-logo-prep</b>-Skill.</div>
+      <div class="note">Mit <b>Zielort wählen</b> fragt der Browser Ordner und Dateinamen ab (auch beim Projekt speichern); ohne Häkchen landet die Datei wie bisher im Download-Ordner. Tipp: <kbd>Scrollrad</kbd> zoomt am Cursor · <kbd>ziehen</kbd> verschiebt. Logo-Panels werden <b>auto-getrimmt</b> (kein Crop) — für scharfe Logos SVG oder ≥144px hoch liefern. Batch für viele Logos: <b>relaunch-logo-prep</b>-Skill.</div>
     </div>
 
     <div class="block">
@@ -1132,8 +1138,47 @@ async function loadFile(file){
 
 // ---- Export at exact target resolution ----
 function slug(s){return (s||'export').toLowerCase().replace(/\.[^.]+$/,'').replace(/[_\s]+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'')||'export';}
+
+// ---- Speichern: Zielort wählen (File System Access API) oder klassisch in den Download-Ordner ----
+// Der Dialog braucht eine frische Nutzeraktion, darum wird der Zielort IMMER zuerst geholt und erst
+// danach gerendert und geschrieben. Fehlt die API (älterer Browser, lokale Datei), fällt alles
+// stillschweigend auf den bisherigen Download zurück.
+const PICK_CANCELLED=Symbol('cancelled');
+const canPickSave=()=> typeof window.showSaveFilePicker==='function';
+function useSaveDialog(){ const c=document.getElementById('askPath'); return !!(c && c.checked && canPickSave()); }
+async function pickSaveHandle(name, kind){
+  const types = kind==='project'
+    ? [{description:'Image-Cropper-Projekt', accept:{'application/json':['.json']}}]
+    : [{description:kind.toUpperCase()+'-Bild',
+        accept:{[kind==='jpeg'?'image/jpeg':'image/'+kind]: [kind==='jpeg'?'.jpg':'.'+kind]}}];
+  try{
+    return await window.showSaveFilePicker({ suggestedName:name, types, excludeAcceptAllOption:false,
+      id: kind==='project' ? 'zic-project' : 'zic-image', startIn:'downloads' });
+  }catch(err){
+    if(err && err.name==='AbortError') return PICK_CANCELLED;   // bewusst abgebrochen: nichts speichern
+    return null;                                                // nicht verfügbar: Download nehmen
+  }
+}
+async function writeBlob(blob, name, handle){
+  if(handle){
+    try{ const w=await handle.createWritable(); await w.write(blob); await w.close();
+      return {name: handle.name || name, picked:true};
+    }catch(err){ /* Schreiben fehlgeschlagen → Download als Rückfalllinie */ }
+  }
+  const url=URL.createObjectURL(blob);
+  const a=document.getElementById('dl'); a.href=url; a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+  return {name, picked:false};
+}
 document.getElementById('export').onclick=async()=>{
   if(!img && !blankMode)return;
+  const ext0=fmt==='jpeg'?'jpg':fmt;
+  const name0=slug(document.getElementById('fname').value)+'.'+ext0;
+  let handle=null;
+  if(useSaveDialog()){
+    handle=await pickSaveHandle(name0, fmt);
+    if(handle===PICK_CANCELLED) return;                         // Dialog abgebrochen
+  }
   if(composerOn||hasLayers()){ try{ await document.fonts.ready; }catch(e){} }
   const [TW,TH]=targetHW();
   const oc=document.createElement('canvas'); oc.width=TW; oc.height=TH;
@@ -1165,12 +1210,8 @@ document.getElementById('export').onclick=async()=>{
   const qual=fmt==='png'?undefined:quality/100;
   const blob=await new Promise(res=>oc.toBlob(res,mime,qual));
   if(!blob){alert('Export fehlgeschlagen (WebP evtl. nicht unterstützt — nimm JPG/PNG).');return;}
-  const ext=fmt==='jpeg'?'jpg':fmt;
-  const name=slug(document.getElementById('fname').value)+'.'+ext;
-  const url=URL.createObjectURL(blob);
-  const a=document.getElementById('dl'); a.href=url; a.download=name; a.click();
-  setTimeout(()=>URL.revokeObjectURL(url),4000);
-  document.getElementById('sizelbl').textContent=`${Math.round(blob.size/1024)} KB · ${name}`;
+  const saved=await writeBlob(blob, name0, handle);
+  document.getElementById('sizelbl').textContent=`${Math.round(blob.size/1024)} KB · ${saved.name}`;
 };
 
 // ================= COMPOSER (on-brand, Regeln aus zetcom-graphics) =================
@@ -1677,11 +1718,16 @@ function drawTextLayer(g,f,TW,TH,L,selected){
     const padX=Math.round(size*1.2*ps), padY=Math.round(size*0.85*ps);
     box={x:x0+ind-padX, y:capTop-padY, w:maxw+padX*2, h:(capBot-capTop)+padY*2};
     const bcol=L.boxColor||accentHex();
+    g.save();
+    // Deckkraft gilt nur für die Fläche, die Schrift bleibt voll deckend
+    g.globalAlpha = (L.boxOpacity!=null? L.boxOpacity : 1) * (g.globalAlpha||1);
     if(L.boxOutline){
-      const bw=Math.max(2,Math.round(TW*0.0018));
+      // Randstärke als Anteil der Schriftgröße: skaliert mit dem Button, nicht mit dem Panel
+      const bw=Math.max(1.5, (L.boxSw!=null?L.boxSw:0.13)*size);
       g.strokeStyle=bcol; g.lineWidth=bw*f;
-      g.strokeRect(box.x*f+bw*f/2, box.y*f+bw*f/2, (box.w-bw)*f, (box.h-bw)*f);
+      g.strokeRect(box.x*f+bw*f/2, box.y*f+bw*f/2, Math.max(0.5,(box.w-bw)*f), Math.max(0.5,(box.h-bw)*f));
     } else { g.fillStyle=bcol; g.fillRect(box.x*f, box.y*f, box.w*f, box.h*f); }
+    g.restore();
   }
   if(eye){ g.fillStyle = L.pixColor || accentHex(); g.fillRect(x0*f, sqY*f, sq*f, sq*f); }
   g.fillStyle=L.color;
@@ -1808,9 +1854,13 @@ function syncLayerEditor(){
     $('lySize').value=Math.round(L.sizePct*1000); $('lySizeV').textContent=Math.round(L.sizePct*TW)+'px';
     $('lyEyebrow').checked=!!L.eyebrow; $('lyEyeOpts').style.display=L.eyebrow?'flex':'none';
     $('lyEyeCaps').checked=L.eyeCaps!==false; $('lyPixColor').value=L.pixColor||accentHex();
-    const pad=L.boxPad!=null?L.boxPad:1;
+    const pad=L.boxPad!=null?L.boxPad:1, bsw=L.boxSw!=null?L.boxSw:0.13, bop=L.boxOpacity!=null?L.boxOpacity:1;
     $('lyBoxOn').checked=!!L.boxOn; $('lyBoxOpts').style.display=L.boxOn?'block':'none';
     $('lyBoxColor').value=L.boxColor||accentHex(); $('lyBoxOutline').checked=!!L.boxOutline;
+    $('lyBoxSwWrap').style.display=L.boxOutline?'flex':'none';
+    $('lyBoxSw').value=Math.round(bsw*100);
+    $('lyBoxSwV').textContent=Math.max(1,Math.round(bsw*Math.max(6,L.sizePct*TW)))+'px';
+    $('lyBoxOpac').value=Math.round(bop*100); $('lyBoxOpacV').textContent=Math.round(bop*100)+'%';
     $('lyBoxPad').value=Math.round(pad*100); $('lyBoxPadV').textContent=Math.round(pad*100)+'%';
     $('lyArrow').value=L.arrow||'none';
   } else {
@@ -1828,7 +1878,7 @@ function addTextLayer(){
   layers.push({type:'text', text:'Neuer Text', font:'"DM Sans"', weight:'700', italic:false,
     color: composerOn? compTextColor() : '#ffffff', align:'left', sizePct:0.05, xPct:0.1+off, yPct:0.1+off,
     eyebrow:false, eyeCaps:true, pixColor:accentHex(),
-    boxOn:false, boxColor:accentHex(), boxOutline:false, boxPad:1, arrow:'none'});
+    boxOn:false, boxColor:accentHex(), boxOutline:false, boxSw:0.13, boxOpacity:1, boxPad:1, arrow:'none'});
   selectLayer(layers.length-1);
 }
 // CTA-Button = Textebene mit Hintergrundfläche und Pfeil. Steckt im gleichen Ebenen-Stack,
@@ -1839,7 +1889,7 @@ function addCtaLayer(){
   layers.push({type:'text', text:'Link in Comments', font:'"DM Sans"', weight:'700', italic:false,
     color:'#ffffff', align:'left', sizePct:0.021, xPct:0.08, yPct:0.74-off,
     eyebrow:false, eyeCaps:true, pixColor:accentHex(),
-    boxOn:true, boxColor:accentHex(), boxOutline:false, boxPad:1, arrow:'down'});
+    boxOn:true, boxColor:accentHex(), boxOutline:false, boxSw:0.13, boxOpacity:1, boxPad:1, arrow:'down'});
   selectLayer(layers.length-1);
 }
 async function addImageLayerFromFile(file){
@@ -1905,7 +1955,12 @@ $('lyBoxOn').onchange=H(null,e=>{ if(curL()){ const L=curL(); L.boxOn=e.target.c
   if(L.boxOn && !L.boxColor) L.boxColor=accentHex();
   $('lyBoxOpts').style.display=L.boxOn?'block':'none'; render(); renderLayerList(); } });
 $('lyBoxColor').oninput=H('lyBoxColor',e=>{ if(curL()){ curL().boxColor=e.target.value; render(); } });
-$('lyBoxOutline').onchange=H(null,e=>{ if(curL()){ curL().boxOutline=e.target.checked; render(); } });
+$('lyBoxOutline').onchange=H(null,e=>{ if(curL()){ curL().boxOutline=e.target.checked;
+  $('lyBoxSwWrap').style.display=e.target.checked?'flex':'none'; render(); } });
+$('lyBoxSw').oninput=H('lyBoxSw',e=>{ if(curL()){ const L=curL(); L.boxSw=+e.target.value/100;
+  $('lyBoxSwV').textContent=Math.max(1,Math.round(L.boxSw*Math.max(6,L.sizePct*targetHW()[0])))+'px'; render(); } });
+$('lyBoxOpac').oninput=H('lyBoxOpac',e=>{ if(curL()){ curL().boxOpacity=+e.target.value/100;
+  $('lyBoxOpacV').textContent=e.target.value+'%'; render(); } });
 $('lyBoxPad').oninput=H('lyBoxPad',e=>{ if(curL()){ curL().boxPad=+e.target.value/100;
   $('lyBoxPadV').textContent=e.target.value+'%'; render(); } });
 $('lyArrow').onchange=H(null,e=>{ if(curL()){ curL().arrow=e.target.value; render(); } });
@@ -2138,6 +2193,7 @@ function projectState(){
           color:L.color, align:L.align, sizePct:L.sizePct, xPct:L.xPct, yPct:L.yPct,
           eyebrow:!!L.eyebrow, eyeCaps:L.eyeCaps!==false, pixColor:L.pixColor||null, cuts:cutsOut(L),
           boxOn:!!L.boxOn, boxColor:L.boxColor||null, boxOutline:!!L.boxOutline,
+          boxSw:L.boxSw!=null?L.boxSw:0.13, boxOpacity:L.boxOpacity!=null?L.boxOpacity:1,
           boxPad:L.boxPad!=null?L.boxPad:1, arrow:L.arrow||'none' }
       : L.type==='shape'
       ? { type:'shape', kind:L.kind, xPct:L.xPct, yPct:L.yPct, wPct:L.wPct, hPct:L.hPct, dir:L.dir||'\\',
@@ -2150,16 +2206,20 @@ function projectState(){
   };
 }
 
-function saveProject(){
+async function saveProject(){
+  const name=slug($('fname').value||'projekt')+'.zic.json';
+  let handle=null;
+  if(useSaveDialog()){                       // Zielort zuerst, solange die Nutzeraktion frisch ist
+    handle=await pickSaveHandle(name,'project');
+    if(handle===PICK_CANCELLED) return;
+  }
   let json;
   try{ json=JSON.stringify(projectState()); }
   catch(err){ alert('Projekt konnte nicht gespeichert werden: '+err.message); return; }
   const blob=new Blob([json],{type:'application/json'});
-  const name=slug($('fname').value||'projekt')+'.zic.json';
-  const url=URL.createObjectURL(blob);
-  const a=$('dl'); a.href=url; a.download=name; a.click();
-  setTimeout(()=>URL.revokeObjectURL(url),4000);
-  $('projectNote').innerHTML=`Gespeichert: <b>${name}</b> · ${Math.round(blob.size/1024)} KB (Bilder sind eingebettet). Zum Weiterarbeiten wieder laden.`;
+  const saved=await writeBlob(blob, name, handle);
+  $('projectNote').innerHTML=`Gespeichert: <b>${saved.name}</b> · ${Math.round(blob.size/1024)} KB (Bilder sind eingebettet)`
+    + (saved.picked? ' am gewählten Zielort.' : ' im Download-Ordner.') + ' Zum Weiterarbeiten wieder laden.';
 }
 
 async function loadProject(file){
@@ -2251,6 +2311,7 @@ async function applyProject(P){
         eyebrow:!!L.eyebrow, eyeCaps:L.eyeCaps!==false, pixColor:L.pixColor||accentHex(),
         cuts:cutsIn(L.cuts), boxOn:!!L.boxOn, boxColor:L.boxColor||accentHex(),
         boxOutline:!!L.boxOutline, boxPad:L.boxPad!=null?+L.boxPad:1,
+        boxSw:L.boxSw!=null?+L.boxSw:0.13, boxOpacity:L.boxOpacity!=null?+L.boxOpacity:1,
         arrow:['down','ne'].includes(L.arrow)?L.arrow:'none'});
     } else if(L.type==='shape'){
       layers.push({type:'shape', kind: L.kind==='line'?'line':'rect', dir: L.dir==='/'?'/':'\\',
@@ -2283,7 +2344,7 @@ async function applyProject(P){
       align:'left', sizePct:0.021, xPct:0.055, yPct:0.80,
       eyebrow:false, eyeCaps:true, pixColor:accentHex(), cuts:null,
       boxOn:true, boxOutline:true, boxColor:(c.bgMode==='white'||c.bgMode==='gray') ? '#000000' : '#ffffff',
-      boxPad:1, arrow:['down','ne'].includes(c.ctaArrow)?c.ctaArrow:'none'});
+      boxSw:0.13, boxOpacity:1, boxPad:1, arrow:['down','ne'].includes(c.ctaArrow)?c.ctaArrow:'none'});
     projectMigrationNote=' Der CTA-Button aus dem Composer ist jetzt eine <b>Ebene</b> (unten links abgelegt) — Position bitte prüfen.';
   }
 
@@ -2421,6 +2482,12 @@ document.querySelectorAll('.side .block.acc > .acc-h').forEach(h=>{
     h.parentElement.classList.toggle('collapsed');
   });
 });
+(function initSavePicker(){
+  const c=$('askPath'), w=$('askPathWrap');
+  if(!c || canPickSave()) return;
+  c.checked=false; c.disabled=true; w.style.opacity='.5';
+  w.title='Dieser Browser kann keinen Zielort abfragen — gespeichert wird in den Download-Ordner.';
+})();
 applyPanelFormat(); setupFrame(); updateControls(); syncToolUI(); initFont(); initLogos(); render(); syncMeta();
 </script>
 </body>
