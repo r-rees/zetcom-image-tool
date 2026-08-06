@@ -127,6 +127,9 @@
     </div>
     <div class="canvas-area">
       <div id="drop">Bild hierher ziehen oder klicken<br><small>PNG · JPG · WebP · SVG · beliebiges Format/Ratio<br>oder oben <b>ohne Bild</b> anhaken und auf leerer Fläche bauen</small></div>
+      <div id="previewNote" style="display:none;margin-bottom:8px;padding:8px 12px;border:2px solid #000;font-size:12px;line-height:1.4">
+        <b>Ansicht ohne Foto.</b> Weißer Grund, keine Abdunklung, helle Schrift ersatzweise schwarz. Foto ins Fenster ziehen oder <b>Anderes Bild</b> im Werkzeugbalken. Der Export bleibt gesperrt, bis ein Foto liegt.
+      </div>
       <canvas id="cv" width="600" height="400" style="display:none"></canvas>
       <input id="file" type="file" accept="image/*,.svg" style="display:none">
     </div>
@@ -407,6 +410,9 @@
         <label>Pixelgröße (Ecke-an-Ecke) <b id="pxv">6.0%</b></label>
         <input id="pixSize" type="range" min="20" max="140" value="60">
       </div>
+      <label class="mini" style="display:flex;gap:8px;align-items:center;margin-top:8px">
+        <input id="pixSnap" type="checkbox" checked> auf halbes Modul einrasten (P7)
+      </label>
       <div class="btnrow" style="margin-top:10px">
         <button class="ghost" id="pixAdd" style="flex:1" title="Einen weiteren Pixel in Akzentfarbe einfügen">+ einzelner Pixel</button>
         <button class="ghost" id="pixClear" style="flex:1">alle löschen</button>
@@ -419,7 +425,7 @@
           <button class="ghost" id="pixDeselect">abwählen</button>
         </div>
       </div>
-      <div class="note" style="margin-top:4px">Vorgefertigt oder mit <b>+ einzelner Pixel</b> beliebig ergänzt · Pixel <b>anklicken</b> = auswählen/umfärben, <b>ziehen</b> = verschieben. Vergrößern hält Paare Ecke an Ecke. Ein neues Template ersetzt alle Pixel, auch die einzeln eingefügten.</div>
+      <div class="note" style="margin-top:4px">Vorgefertigt oder mit <b>+ einzelner Pixel</b> beliebig ergänzt · Pixel <b>anklicken</b> = auswählen/umfärben, <b>ziehen</b> = verschieben. Vergrößern hält Paare Ecke an Ecke. Ein neues Template ersetzt alle Pixel, auch die einzeln eingefügten.<br><b>Einrasten</b> zieht jede Quadratkante auf ein Vielfaches des halben Moduls, gemessen zur jeweils nächsten Bildkante. <b>Alt beim Ziehen</b> hebt es kurz auf. Regel P7, siehe Brand Guidelines.</div>
     </div>
 
     <!-- LOGO — global -->
@@ -541,6 +547,16 @@ let fmt='webp', quality=80, bg='transparent';
 // ---- Fläche & Akzent (global, unabhängig vom Composer) ----
 let bgMode='photo', product='museum', accentCustom='#ff5900';
 let overlayOp=0;                           // Abdunklung des Fotos — 0, damit reines Cropping unberührt bleibt
+let overlayTouched=false;                  // sobald am Regler gezogen wurde, nie wieder vorbelegen
+// overlayOp ist der WIRKSAME Wert, overlayWanted der gewuenschte. Ohne Foto ist die
+// Abdunklung immer 0 (Brand Guidelines: sie ist ein Rechenwert und braucht ein Foto,
+// ueber das sie rechnet). Der Wunschwert bleibt gemerkt und greift, sobald ein Foto
+// liegt. Frueher blieb overlayOp auf 0,14 stehen und nur das Zeichnen wurde
+// uebersprungen, dann log der Regler 14 Prozent an, ohne dass etwas abgedunkelt war.
+let overlayWanted=0;                       // startet auf 0: ein reiner Zuschnitt bleibt unberuehrt.
+                                           // 0,14 setzt erst armOverlayDefault, sobald aus dem
+                                           // Zuschnitt eine CD-Grafik wird (Composer, Pixel-Dekor),
+                                           // oder eine geladene Projektdatei.
 // ---- Composer state (nur noch das feste Textlayout) ----
 let composerOn=false, eyebrowCaps=true;
 let eyebrowTxt='', titleTxt='', sublineTxt='', metaTxt='', textAlign='left';
@@ -568,6 +584,20 @@ const CD_COLORS=[
   ['#6432c9','Foundation purpur'],['#2a91ff','Manage blau'],['#3ec325','Eco grün'],
   ['#000000','Schwarz'],['#191919','Grey 95'],['#454545','Grey 80'],['#6b6b6b','Grey 70 (muted)'],
   ['#878787','Grey 60'],['#dadada','Grey 30'],['#ededed','Light grey'],['#f7f7f7','Extra light grey'],['#ffffff','Weiß']];
+// Geschlossene Textfarben-Liste, entschieden Robin 06.08.2026. Alles, was nicht hier steht,
+// ist als Schriftfarbe gesperrt: Gelb (1,84) und Grün (2,32) in keiner Größe, die gesamte
+// Graurampe (black-60 = 3,59 und darunter), Weiß auf jedem Akzent außer Purpur. Orange und
+// Blau bestehen nur auf Weiß (3,14 / 3,19), nicht auf Grau (2,93 / 2,97), und wie jeder
+// Akzent erst ab --accent-text-min-ratio (0,050 der Canvas-Breite). Das Farbfeld daneben
+// bleibt frei, die Reihe ist die CD-Auswahl, keine technische Sperre.
+const TEXT_COLORS=[
+  ['#ffffff','Weiß — auf Schwarz, auf Akzent nur Purpur, auf Foto die einzige Textfarbe'],
+  ['#000000','Schwarz — auf Weiß, auf Grau, auf jeder Akzentfläche außer Purpur'],
+  ['#6432c9','Foundation purpur — 7,39 auf Weiß, einzige Akzentfarbe in jeder Größe'],
+  ['#d133c3','Art violett — 4,22 auf Weiß, 3,94 auf Grau, ab 0,050 der Breite'],
+  ['#2a91ff','Manage blau — 3,19 auf Weiß, ab 0,050. NICHT auf Grau (2,97)'],
+  ['#ff5900','Museum orange — 3,14 auf Weiß, ab 0,050. NICHT auf Grau (2,93)'],
+];
 const PAL_MARKS=[];                        // Aktiv-Marker der Palettenreihen (füllt attachPalette)
 function syncPalettes(){ PAL_MARKS.forEach(m=>m()); }
 let textBounds=null;                       // {x,y,w,h} in Ziel-px (für Hit-Test beim Ziehen)
@@ -614,7 +644,7 @@ function snapshot(){
     fmt, quality, bg, emptyMode, fname:document.getElementById('fname').value,
     img, imgSrc, iw, ih, trim: trim?{...trim}:null,
     scale, coverScale, rot, tx, ty, flipX,
-    bgMode, product, accentCustom, overlayOp,
+    bgMode, product, accentCustom, overlayOp, overlayWanted, overlayTouched,
     composerOn, eyebrowCaps, eyebrowTxt, titleTxt, sublineTxt, metaTxt, textAlign,
     textX, textY, titleScale, bodyScale,
     pixTpl, pixSize, pixSel, pixels: pixels.map(p=>({...p})),
@@ -638,6 +668,7 @@ function applySnapshot(s){
     img=s.img; imgSrc=s.imgSrc; iw=s.iw; ih=s.ih; trim=s.trim?{...s.trim}:null;
     scale=s.scale; coverScale=s.coverScale; rot=s.rot; tx=s.tx; ty=s.ty; flipX=s.flipX;
     bgMode=s.bgMode; product=s.product; accentCustom=s.accentCustom; overlayOp=s.overlayOp;
+    overlayWanted=s.overlayWanted!=null?s.overlayWanted:s.overlayOp; overlayTouched=!!s.overlayTouched;
     composerOn=s.composerOn; eyebrowCaps=s.eyebrowCaps; eyebrowTxt=s.eyebrowTxt; titleTxt=s.titleTxt;
     sublineTxt=s.sublineTxt; metaTxt=s.metaTxt; textAlign=s.textAlign;
     textX=s.textX; textY=s.textY; titleScale=s.titleScale; bodyScale=s.bodyScale;
@@ -795,6 +826,8 @@ function render(){
     ctx.restore();
   } else if(emptyMode){ // leere Fläche: Exporthintergrund zeigen, transparent bleibt das CSS-Schachbrett
     if(bg!=='transparent'){ ctx.save(); clipBgCuts(ctx,FW,FH); ctx.fillStyle=bg; ctx.fillRect(0,0,FW,FH); ctx.restore(); }
+  } else if(previewMode()){ // Projekt ohne Foto: weisser Grund, damit die Komposition sichtbar ist
+    ctx.save(); clipBgCuts(ctx,FW,FH); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,FW,FH); ctx.restore();
   } else { drawFrameHandles(ctx); return; }
   drawScene(ctx, FW, true);
   if(showGuides()){ drawOverlay(); checkGap(); }
@@ -982,7 +1015,9 @@ cv.addEventListener('pointermove',e=>{ if(!dragging)return;
   if(dragMode==='brush'){ const p=evtTarget(e); addStrokePoint(p.px/TW, p.py/TH); lx=e.offsetX; ly=e.offsetY; render(); return; }
   if(!dragPushed){ pushHist('drag'); dragPushed=true; }   // reines Auswählen soll keinen Schritt kosten
   if(dragMode==='shapeH'){ const L=layers[layerSel]; if(L) resizeShape(L, shapeH, dx*TW/FW, dy*TH/FH, TW, TH); }
-  else if(dragMode==='pixel' && pixSel>=0){ pixels[pixSel].ax+=dx/FW; pixels[pixSel].ay+=dy/FH; pixMoved=true; }
+  else if(dragMode==='pixel' && pixSel>=0){ const p=pixels[pixSel];
+    p.ax+=dx/FW; p.ay+=dy/FH; pixMoved=true;
+    if($('pixSnap').checked && !e.altKey) snapPixel(p,TW,TH); }
   else if(dragMode==='layer' && selSet.size){ for(const idx of selSet){ layers[idx].xPct+=dx/FW; layers[idx].yPct+=dy/FH; } }
   else if(dragMode==='text'){ textX+=dx*TW/FW; textY+=dy*TH/FH; }
   else { tx+=dx; ty+=dy; }
@@ -1032,8 +1067,11 @@ document.getElementById('rr').onclick=()=>{pushHist();bump(90);};
 function bump(d){rot=((rot+d+180)%360+360)%360-180;document.getElementById('rot').value=rot;document.getElementById('rotv').textContent=rot+'°';render();}
 document.getElementById('flip').onclick=()=>{pushHist();flipX*=-1;render();};
 document.getElementById('fit').onclick=()=>{pushHist();fitCover();render();};
-document.getElementById('clear').onclick=()=>{pushHist();img=null;imgSrc=null;trim=null;document.getElementById('file').value='';
-  updateBlank(); updateControls(); setupFrame(); render(); syncMeta();};
+// „Anderes Bild" oeffnet direkt den Dateidialog (Robin 06.08.2026). Vorher wurde das
+// Bild entfernt und die Zeichenflaeche in eine Drop-Zone verwandelt, was einen Klick
+// mehr kostete und den aufgebauten Stand kurz unsichtbar machte. Das alte Bild bleibt
+// stehen, bis ein neues gewaehlt ist; Abbrechen im Dialog aendert jetzt nichts mehr.
+document.getElementById('clear').onclick=()=>{ document.getElementById('file').value=''; fileIn.click(); };
 // ---- Arbeitsfläche: Ansicht zoomen + ohne Bild arbeiten ----
 document.getElementById('vzIn').onclick=()=>stepViewZoom(1);
 document.getElementById('vzOut').onclick=()=>stepViewZoom(-1);
@@ -1075,7 +1113,16 @@ function syncMeta(){
 const drop=document.getElementById('drop'), fileIn=document.getElementById('file');
 function showDrop(v){drop.classList.toggle('hidden',!v);cv.style.display=v?'none':'';
   document.getElementById('tools').style.display=v?'none':'flex';document.getElementById('export').disabled=v;}
-document.querySelector('.canvas-area').addEventListener('click',()=>{if(!img && !blankMode)fileIn.click();});
+// Vorschaumodus (Robin 06.08.2026): ein geladenes Projekt ohne Quellbild zeigte bisher nur
+// die Drop-Zone, man sah also nicht, was man geladen hat. Jetzt wird die Komposition auf
+// weissem Grund gerendert: Hintergrund weiss, keine Abdunklung, und Schrift, die auf Weiss
+// unsichtbar waere, ersatzweise schwarz. Es ist eine ANSICHT, die Datei bleibt unveraendert
+// und der Export bleibt gesperrt, bis ein Foto liegt.
+function previewMode(){
+  return !img && !emptyMode && bgMode==='photo'
+      && !!(layers.length || pixels.length || composerOn || (logoOn && logoReady()));
+}
+document.querySelector('.canvas-area').addEventListener('click',()=>{if(!img && !blankMode && !previewMode())fileIn.click();});
 fileIn.onchange=e=>{if(e.target.files[0])dropFile(e.target.files[0]);};
 ['dragover','dragenter'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('hot');}));
 ['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();if(ev==='drop'&&e.dataTransfer.files[0])dropFile(e.dataTransfer.files[0]);drop.classList.remove('hot');}));
@@ -1132,7 +1179,7 @@ async function loadFile(file){
     if(!document.getElementById('fname').value){
       document.getElementById('fname').value=file.name.replace(/\.[^.]+$/,'').toLowerCase().replace(/[_\s]+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'');
     }
-    showDrop(false); setupFrame(); if(!isLogo())fitCover(); updateControls(); render(); syncMeta();
+    showDrop(false); setupFrame(); if(!isLogo())fitCover(); syncOverlayToImage(); updateControls(); render(); syncMeta();
   }catch(err){ alert('Konnte das Bild nicht laden: '+err.message); }
 }
 
@@ -1225,7 +1272,10 @@ function mutedColor(){ return compDark()? '#b5b5b5' : '#6b6b6b'; }
 function drawScene(g, cw, interactive){
   const [TW,TH]=targetHW(); const f=cw/TW; const CH=g.canvas.height;
   const M=Math.round(TW*0.055/8)*8;
-  if(bgMode==='photo' && overlayOp>0){ g.save(); g.fillStyle=`rgba(0,0,0,${overlayOp})`; g.fillRect(0,0,cw,CH); g.restore(); } // flach, kein Gradient
+  // Abdunklung nur, wenn wirklich ein Foto darunter liegt. Auf leerer Flaeche waere sie
+  // ein grauer Schleier ohne Zweck und widerspraeche der Regel „ohne Foto immer null"
+  // (Brand Guidelines, Abdunklung ist ein Rechenwert).
+  if(bgMode==='photo' && img && overlayOp>0){ g.save(); g.fillStyle=`rgba(0,0,0,${overlayOp})`; g.fillRect(0,0,cw,CH); g.restore(); } // flach, kein Gradient
   if(brushUnder) drawBrush(g,cw,CH);
   drawPixels(g,f,TW,TH,interactive);
   if(composerOn) drawCompText(g,f,TW,TH,M); else textBounds=null;
@@ -1302,9 +1352,12 @@ function capMidY(g,f,yTop,fontSize){ const m=fontMetrics(g,f,fontSize); return y
 // linke Kante bzw. die optische Oberkante des Blocks.
 function drawCompText(g,f,TW,TH,M){
   const col=compTextColor(), acc=accentHex(), mut=mutedColor();
-  // Eyebrow: 0.024 = --off-social-small, festgelegt 06.08.2026 (vorher 0.017, dritter Wert fuer dieselbe Sache)
-  const eySize=Math.round(Math.max(13,TW*0.024)*bodyScale), tSize=Math.round(Math.min(TW*0.075,TH*0.24)*titleScale);
-  const sSize=Math.round(TW*0.033*bodyScale), mSize=Math.round(TW*0.021*bodyScale);
+  // Off-site-Skala Social, tokens.css. Der Composer fuhr bis zum 06.08.2026 eine eigene,
+  // nirgends dokumentierte vierte Skala (0.075 / 0.033 / 0.021). Nachgezogen am 06.08.2026:
+  // Titel = --off-social-headline, Subline = --off-social-emphasis, Meta = --off-social-body,
+  // Eyebrow = --off-social-small. Zuordnung an den freigegebenen Posts abgelesen.
+  const eySize=Math.round(Math.max(13,TW*0.024)*bodyScale), tSize=Math.round(Math.min(TW*0.085,TH*0.24)*titleScale);
+  const sSize=Math.round(TW*0.050*bodyScale), mSize=Math.round(TW*0.037*bodyScale);
   const eyStr = eyebrowCaps ? eyebrowTxt.trim().toUpperCase() : eyebrowTxt.trim();
   const hasEy=eyStr!=='', hasT=titleTxt.trim()!=='', hasS=sublineTxt.trim()!=='',
         hasM=metaTxt.trim()!=='';
@@ -1405,6 +1458,21 @@ function pixelTemplateDefs(tpl){
 }
 function genPixels(){ pixels=pixelTemplateDefs(pixTpl).map(d=>({ax:d.ax,ay:d.ay,gx:d.gx,gy:d.gy, c:(d.ci==='a'?accentHex():PX[d.ci])})); pixSel=-1; }
 function pixelRect(p,TW,TH,side){ return {x:Math.round(p.ax*TW+p.gx*side), y:Math.round(p.ay*TH+p.gy*side), s:side}; }
+// P7 (Robin 06.08.2026): Platzierungsraster ist ein HALBES Modul, gemessen zur jeweils
+// nächsten Bildkante. Nicht von links oben: 1200/84 = 14,29 geht nicht auf, ein rechts-
+// bündiges Quadrat läge auf einem linksbündigen Raster daneben. Deshalb an jeder Kante
+// gespiegelt verankert. Nicht mit dem 8px-Ausrichtungsraster verwechseln.
+const PIX_SNAP=0.5;
+function snapEdge(v,side,extent){
+  const step=side*PIX_SNAP, a=v, b=extent-(v+side);
+  return a<=b ? Math.round(a/step)*step : extent-side-Math.round(b/step)*step;
+}
+function snapPixel(p,TW,TH){
+  const side=Math.max(8,Math.round(TW*pixSize));
+  const r=pixelRect(p,TW,TH,side);
+  p.ax=(snapEdge(r.x,side,TW)-p.gx*side)/TW;
+  p.ay=(snapEdge(r.y,side,TH)-p.gy*side)/TH;
+}
 function drawPixels(g,f,TW,TH,interactive){
   const side=Math.max(8,Math.round(TW*pixSize));
   pixels.forEach((p,i)=>{ const r=pixelRect(p,TW,TH,side);
@@ -1513,16 +1581,46 @@ Object.keys(ACCENTS).forEach(k=>{const o=document.createElement('option');o.valu
 prodSel.appendChild(Object.assign(document.createElement('option'),{value:'custom',textContent:'Custom-Farbe …'}));
 function updateBlank(){
   blankMode = emptyMode || bgMode!=='photo';
-  showDrop(!(img||blankMode));
+  const pv = previewMode();
+  syncOverlayToImage();
+  showDrop(!(img||blankMode||pv));
+  document.getElementById('previewNote').style.display = pv ? '' : 'none';
   document.getElementById('export').disabled = !(img||blankMode);
 }
 const $=id=>document.getElementById(id);
 $('compOn').onchange=H(null,e=>{ composerOn=e.target.checked; $('compBody').style.display=composerOn?'block':'none';
+  if(composerOn) armOverlayDefault();
   $('compChev').style.transform=composerOn?'none':'rotate(-90deg)'; updateBlank(); updateControls(); render(); });
 // ganzer Composer-Header klickbar (Klick auf Checkbox/Label nicht doppelt werten)
 $('composerHead').addEventListener('click',e=>{ if(e.target.closest('input,label')) return;
   const cb=$('compOn'); cb.checked=!cb.checked; cb.dispatchEvent(new Event('change')); });
-$('bgMode').onchange=H(null,e=>{ bgMode=e.target.value; $('overlayWrap').style.display=bgMode==='photo'?'':'none'; updateBlank(); render(); });
+// Abdunklung vorbelegen (Robin 06.08.2026). Sie ist ein Rechenwert, kein Geschmackswert:
+// ohne Foto immer 0, mit Foto so hoch, dass weißer Text in der Textzone WCAG erreicht.
+// --photo-overlay (14 %) ist der Startwert, nicht der Zielwert; er trägt Textzonen bis
+// Luminanz 0,42 bei großer Schrift und nur bis 0,25 bei Fließtext. Vorbelegt wird erst,
+// wenn aus dem reinen Zuschnitt eine CD-Grafik wird, sonst würde ein simpler Crop
+// stillschweigend abgedunkelt. Wer am Regler zieht, behält seinen Wert für immer.
+function armOverlayDefault(){
+  if(overlayTouched || bgMode!=='photo' || overlayWanted>0) return;
+  overlayWanted=0.14; syncOverlayToImage(); render();
+}
+// Einzige Stelle, die overlayOp setzt: ohne Foto null, mit Foto der Wunschwert.
+function syncOverlayToImage(){
+  const soll = (img && bgMode==='photo') ? overlayWanted : 0;
+  if(overlayOp!==soll) overlayOp=soll;
+  syncOverlayUI();
+}
+function syncOverlayUI(){
+  const r=$('overlayOp'), pv=!img && bgMode==='photo';
+  r.value=Math.round(overlayWanted*100);
+  r.disabled=pv;
+  $('opv').textContent = pv ? Math.round(overlayWanted*100)+'% (erst mit Foto)'
+                            : Math.round(overlayOp*100)+'%';
+}
+$('bgMode').onchange=H(null,e=>{ bgMode=e.target.value; $('overlayWrap').style.display=bgMode==='photo'?'':'none';
+  if(bgMode==='photo') armOverlayDefault();
+  syncOverlayToImage();   // Vollton heisst kein Foto, also keine Abdunklung
+  updateBlank(); render(); });
 prodSel.onchange=H(null,e=>{ product=e.target.value; $('accentCustom').style.display = product==='custom'?'block':'none';
   syncAccentPalette(); render(); });
 $('accentCustom').oninput=H('accent',e=>{ accentCustom=e.target.value; render(); });
@@ -1535,9 +1633,9 @@ $('textAlign').onchange=H(null,e=>{ textAlign=e.target.value; render(); });
 $('resetText').onclick=()=>{ pushHist(); textX=null; textY=null; render(); };
 $('titleScale').oninput=H('titleScale',e=>{ titleScale=+e.target.value/100; $('tsv').textContent=e.target.value+'%'; render(); });
 $('bodyScale').oninput=H('bodyScale',e=>{ bodyScale=+e.target.value/100; $('bsv').textContent=e.target.value+'%'; render(); });
-$('overlayOp').oninput=H('overlay',e=>{ overlayOp=+e.target.value/100; $('opv').textContent=e.target.value+'%'; render(); });
-$('pixTpl').onchange=H(null,e=>{ pixTpl=e.target.value; genPixels(); updatePixUI(); render(); });
-$('pixSize').oninput=H('pixSize',e=>{ pixSize=+e.target.value/1000; $('pxv').textContent=(pixSize*100).toFixed(1)+'%'; render(); });
+$('overlayOp').oninput=H('overlay',e=>{ overlayWanted=+e.target.value/100; overlayTouched=true; syncOverlayToImage(); render(); });
+$('pixTpl').onchange=H(null,e=>{ pixTpl=e.target.value; genPixels(); snapAllPixels(); if(pixTpl!=='none') armOverlayDefault(); updatePixUI(); render(); });
+$('pixSize').oninput=H('pixSize',e=>{ pixSize=+e.target.value/1000; $('pxv').textContent=(pixSize*100).toFixed(1)+'%'; snapAllPixels(); render(); });
 $('pixColor').oninput=H('pixColor',e=>{ if(pixSel>=0){ pixels[pixSel].c=e.target.value; render(); } });
 $('pixDelete').onclick=()=>{ if(pixSel>=0){ pushHist(); pixels.splice(pixSel,1); pixSel=-1; updatePixUI(); render(); } };
 $('pixDeselect').onclick=()=>{ pixSel=-1; updatePixUI(); render(); };
@@ -1546,8 +1644,15 @@ function addPixel(){
   pushHist();
   const n=pixels.length, off=(n%6)*0.045;
   pixels.push({ax:Math.min(0.9, 0.42+off), ay:Math.min(0.9, 0.40+off*0.8), gx:0, gy:0, c:accentHex()});
-  pixSel=pixels.length-1; updatePixUI(); render();
+  pixSel=pixels.length-1; snapAllPixels(); updatePixUI(); render();
 }
+// Einrasten auf alle anwenden: beim Einschalten, beim Einfügen und wenn sich die
+// Modulgröße ändert (das Raster hängt am Modul, eine neue Größe verschiebt es).
+function snapAllPixels(){
+  if(!pixels.length || !$('pixSnap').checked) return;
+  const [TW,TH]=targetHW(); pixels.forEach(p=>snapPixel(p,TW,TH));
+}
+$('pixSnap').onchange=()=>{ if(!$('pixSnap').checked) return; pushHist(); snapAllPixels(); render(); };
 $('pixAdd').onclick=()=>addPixel();
 $('pixClear').onclick=()=>{ if(!pixels.length)return; pushHist();
   pixels=[]; pixSel=-1; pixTpl='none'; $('pixTpl').value='none'; updatePixUI(); render(); };
@@ -1689,6 +1794,19 @@ function segDist(px,py,a,b){
   let t = l2 ? (wx*vx+wy*vy)/l2 : 0; t=Math.max(0,Math.min(1,t));
   return Math.hypot(wx-t*vx, wy-t*vy);
 }
+// Ersatzfarbe NUR fuer die Ansicht ohne Foto. Schrift, die auf weissem Grund verschwaende,
+// wird schwarz gezeichnet. Wer auf einer deckenden Flaeche oder auf einem CTA-Kasten sitzt,
+// behaelt seine Farbe: dort ist der Grund ja da. Die Datei wird nicht angefasst.
+function previewInk(L,x0,y0,TW,TH){
+  if(!previewMode() || L.boxOn) return L.color;
+  const c=(L.color||'').toLowerCase();
+  const hell = c==='#ffffff' || c==='#fff' || c==='white' || c==='#f7f7f7' || c==='#ededed';
+  if(!hell) return L.color;
+  const aufFlaeche = layers.some(S => S.type==='shape' && S.fillOn!==false && (S.opacity==null||S.opacity>=0.99)
+    && x0 >= S.xPct*TW-1 && x0 <= (S.xPct+S.wPct)*TW+1
+    && y0 >= S.yPct*TH-1 && y0 <= (S.yPct+S.hPct)*TH+1);
+  return aufFlaeche ? L.color : '#000000';
+}
 function drawTextLayer(g,f,TW,TH,L,selected){
   const size=Math.max(6, L.sizePct*TW), eye=!!L.eyebrow;
   g.save(); g.textBaseline='top';
@@ -1734,7 +1852,7 @@ function drawTextLayer(g,f,TW,TH,L,selected){
     g.restore();
   }
   if(eye){ g.fillStyle = L.pixColor || accentHex(); g.fillRect(x0*f, sqY*f, sq*f, sq*f); }
-  g.fillStyle=L.color;
+  g.fillStyle=previewInk(L,x0,y0,TW,TH);
   lines.forEach((ln,li)=>{ let x=x0+ind;
     if(L.align==='center') x+= (maxw-ws[li])/2; else if(L.align==='right') x+= (maxw-ws[li]);
     g.fillText(ln, x*f, (y0+li*lh)*f);
@@ -1891,7 +2009,7 @@ function addCtaLayer(){
   pushHist();
   const n=layers.filter(l=>l.type==='text' && l.boxOn).length, off=Math.min(0.24, n*0.07);
   layers.push({type:'text', text:'Link in Comments', font:'"DM Sans"', weight:'700', italic:false,
-    color:'#ffffff', align:'left', sizePct:0.021, xPct:0.08, yPct:0.74-off,
+    color:'#ffffff', align:'left', sizePct:0.037, xPct:0.08, yPct:0.74-off,
     eyebrow:false, eyeCaps:true, pixColor:accentHex(),
     boxOn:true, boxColor:accentHex(), boxOutline:false, boxSw:0.13, boxOpacity:1, boxPad:1, arrow:'down'});
   selectLayer(layers.length-1);
@@ -2166,6 +2284,11 @@ updateSelUI(); renderLayerList();
 // v4: Zuschnitt der Bild-Ebenen (`crop`) und weggeschnittene Rechtecke (`cuts` je Ebene, `bgCuts` im Hintergrund).
 // v5: der CTA-Button ist keine Composer-Reihe mehr, sondern eine Textebene mit Hintergrundfläche
 //     (`boxOn`/`boxColor`/`boxOutline`/`boxPad`/`arrow`). Alte Dateien wandeln ihn beim Laden um.
+// 06.08.2026, CD-Abnahme Social (kein Formatwechsel, deshalb weiter v5): der Composer rechnet
+//     mit der Off-site-Skala statt einer eigenen vierten (0.085/0.050/0.037 statt 0.075/0.033/
+//     0.021), Pixelquadrate rasten auf das halbe Modul (P7, Alt hebt es auf), die Abdunklung
+//     wird vorbelegt statt geraten (14 % bei Foto, 0 ohne), und die Schriftfarben-Reihe führt
+//     nur noch die sechs Farben der geschlossenen Liste.
 const PROJECT_APP='zetcom-image-cropper', PROJECT_VERSION=5;
 const cutsOut = L => (L.cuts && L.cuts.length) ? L.cuts.map(c=>({dx:c.dx, dy:c.dy, w:c.w, h:c.h})) : null;
 const cutsIn  = a => Array.isArray(a) && a.length
@@ -2182,7 +2305,7 @@ function projectState(){
     output:{ fmt, quality, bg },
     source: imgSrc ? { src:imgSrc, view:{ scale, rot, tx, ty, flipX } } : null,
     composer:{ on:composerOn, bgMode, product, accentCustom, eyebrowCaps,
-               eyebrowTxt, titleTxt, sublineTxt, metaTxt, overlayOp, textAlign,
+               eyebrowTxt, titleTxt, sublineTxt, metaTxt, overlayOp: overlayWanted, textAlign,
                textX, textY, titleScale, bodyScale },
     pixels:{ tpl:pixTpl, size:pixSize,
              items:pixels.map(p=>({ax:p.ax, ay:p.ay, gx:p.gx, gy:p.gy, c:p.c})) },
@@ -2257,7 +2380,7 @@ async function applyProject(P){
   composerOn=!!c.on; bgMode=c.bgMode||'photo'; product=c.product||'museum'; accentCustom=c.accentCustom||'#ff5900';
   eyebrowCaps=c.eyebrowCaps!==false; eyebrowTxt=c.eyebrowTxt||''; titleTxt=c.titleTxt||'';
   sublineTxt=c.sublineTxt||''; metaTxt=c.metaTxt||'';
-  overlayOp=c.overlayOp!=null?c.overlayOp:0; textAlign=c.textAlign||'left';
+  overlayWanted=c.overlayOp!=null?c.overlayOp:0; overlayOp=0; overlayTouched=true; textAlign=c.textAlign||'left';
   textX=c.textX!=null?c.textX:null; textY=c.textY!=null?c.textY:null;
   titleScale=c.titleScale||1; bodyScale=c.bodyScale||1;
 
@@ -2287,7 +2410,7 @@ async function applyProject(P){
   curStroke=null; brushBaseDirty=true;
 
   // ---- v1-Migration: dort waren Abdunklung, Pixel und Logo nur mit dem Composer sichtbar ----
-  if(!(P.version>=2) && !composerOn){ overlayOp=0; pixTpl='none'; pixels=[]; logoOn=false; }
+  if(!(P.version>=2) && !composerOn){ overlayWanted=0; overlayOp=0; pixTpl='none'; pixels=[]; logoOn=false; }
 
   // ---- Quellbild ----
   img=null; imgSrc=null; trim=null;
@@ -2386,7 +2509,7 @@ function syncProjectUI(){
   $('textAlign').value=textAlign;
   $('titleScale').value=Math.round(titleScale*100); $('tsv').textContent=Math.round(titleScale*100)+'%';
   $('bodyScale').value=Math.round(bodyScale*100);  $('bsv').textContent=Math.round(bodyScale*100)+'%';
-  $('overlayOp').value=Math.round(overlayOp*100);  $('opv').textContent=Math.round(overlayOp*100)+'%';
+  syncOverlayUI();
 
   $('pixTpl').value=pixTpl;
   $('pixSize').value=Math.round(pixSize*1000); $('pxv').textContent=(pixSize*100).toFixed(1)+'%';
@@ -2415,12 +2538,12 @@ function syncProjectUI(){
 // Hängt eine Swatch-Reihe hinter das Element `after` und schreibt beim Klick in das Farbfeld
 // (input+change feuern, damit die bestehenden Handler ganz normal greifen).
 const PAL_BOX={};
-function attachPalette(inputId, after){
+function attachPalette(inputId, after, list){
   const inp=$(inputId); if(!inp) return null;
   const box=document.createElement('div'); box.className='pal'; PAL_BOX[inputId]=box;
   const mark=()=>{ const v=(inp.value||'').toLowerCase();
     [...box.children].forEach(el=>el.classList.toggle('on', el.dataset.c===v)); };
-  CD_COLORS.forEach(([hex,name])=>{
+  (list||CD_COLORS).forEach(([hex,name])=>{
     const s=document.createElement('i'); s.style.background=hex; s.dataset.c=hex; s.title=name+' '+hex.toUpperCase();
     s.onclick=()=>{ inp.value=hex; inp.dispatchEvent(new Event('input')); inp.dispatchEvent(new Event('change')); mark(); };
     box.appendChild(s);
@@ -2432,7 +2555,7 @@ function attachPalette(inputId, after){
 }
 attachPalette('accentCustom', $('accentCustom').parentElement);            // Fläche & Akzent: Custom-Akzentfarbe
 attachPalette('pixColor',     $('pixColor').parentElement);                // Pixel-Dekor: Farbe des gewählten Pixels
-attachPalette('lyColor',      $('lyColor').parentElement.parentElement);   // Textebene: Schriftfarbe
+attachPalette('lyColor',      $('lyColor').parentElement.parentElement, TEXT_COLORS); // Textebene: Schriftfarbe, geschlossene Liste
 attachPalette('brushColor');                                               // Pinsel: Farbe
 attachPalette('shFill');                                                   // Form: Füllfarbe
 attachPalette('shStroke');                                                 // Form: Rand-/Linienfarbe
