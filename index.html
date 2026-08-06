@@ -1302,7 +1302,8 @@ function capMidY(g,f,yTop,fontSize){ const m=fontMetrics(g,f,fontSize); return y
 // linke Kante bzw. die optische Oberkante des Blocks.
 function drawCompText(g,f,TW,TH,M){
   const col=compTextColor(), acc=accentHex(), mut=mutedColor();
-  const eySize=Math.round(Math.max(13,TW*0.017)*bodyScale), tSize=Math.round(Math.min(TW*0.075,TH*0.24)*titleScale);
+  // Eyebrow: 0.024 = --off-social-small, festgelegt 06.08.2026 (vorher 0.017, dritter Wert fuer dieselbe Sache)
+  const eySize=Math.round(Math.max(13,TW*0.024)*bodyScale), tSize=Math.round(Math.min(TW*0.075,TH*0.24)*titleScale);
   const sSize=Math.round(TW*0.033*bodyScale), mSize=Math.round(TW*0.021*bodyScale);
   const eyStr = eyebrowCaps ? eyebrowTxt.trim().toUpperCase() : eyebrowTxt.trim();
   const hasEy=eyStr!=='', hasT=titleTxt.trim()!=='', hasS=sublineTxt.trim()!=='',
